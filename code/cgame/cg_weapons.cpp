@@ -28,6 +28,8 @@ This file is part of Jedi Knight 2.
 
 
 extern void CG_LightningBolt( centity_t *cent, vec3_t origin );
+void resetGunOffsets (void);
+void setCustomGunOffset (int weaponNumber);
 
 #define	PHASER_HOLDFRAME	2
 int cgi_UI_GetMenuInfo(char *menuFile,int *x,int *y);
@@ -932,7 +934,7 @@ void CG_AddViewWeapon( playerState_t *ps )
 		}
 	}
 	// allow the gun to be completely removed
-	if ( !cg_drawGun.integer || cg.zoomMode ) 
+	if ( !cg_drawGun.integer || (cg.zoomMode != 0 && (cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR))) 
 	{
 		vec3_t		origin;
 
@@ -975,14 +977,22 @@ void CG_AddViewWeapon( playerState_t *ps )
 		actualFOV = (cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
 	}
 
-	if ( actualFOV > 80 ) 
+	/*if ( actualFOV > 80 ) 
 	{
 		fovOffset = -0.1 * ( actualFOV - 80 );
 	} 
-	else 
+	
+	if ( actualFOV < 80 ) 
+	{
+		fovOffset = 0.1 * ( 80 - actualFOV );
+	} 
+	
+	if ( actualFOV == 80 )
 	{
 		fovOffset = 0;
-	}
+	}*/
+
+	fovOffset = 0;
 
 	if ( cg.snap->ps.leanofs != 0 )
 	{
@@ -1273,7 +1283,7 @@ void CG_DrawIconBackground(void)
 	int				prongLeftX,prongRightX;
 	qhandle_t		background;
 
-	if (( cg.zoomMode != 0 ) || !( cg_drawHUD.integer ))
+	if ((cg.zoomMode != 0 && (cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR)) || !( cg_drawHUD.integer ))
 	{
 		return;
 	}
@@ -2137,7 +2147,7 @@ void CG_NextWeapon_f( void ) {
 	for ( i = 0 ; i <= MAX_PLAYER_WEAPONS ; i++ ) 
 	{
 		cg.weaponSelect++;
-
+		setCustomGunOffset( cg.weaponSelect );
 		if ( cg.weaponSelect < FIRST_WEAPON || cg.weaponSelect > MAX_PLAYER_WEAPONS) { 
 			cg.weaponSelect = FIRST_WEAPON; 
 		}
@@ -2282,6 +2292,7 @@ void CG_PrevWeapon_f( void ) {
 
 	for ( i = 0 ; i <= MAX_PLAYER_WEAPONS ; i++ ) {
 		cg.weaponSelect--;
+		setCustomGunOffset( cg.weaponSelect );
 		if ( cg.weaponSelect < FIRST_WEAPON || cg.weaponSelect > MAX_PLAYER_WEAPONS) { 
 			cg.weaponSelect = MAX_PLAYER_WEAPONS;
 		}
@@ -2481,6 +2492,7 @@ void CG_Weapon_f( void )
 	SetWeaponSelectTime();
 //	cg.weaponSelectTime = cg.time;
 	cg.weaponSelect = num;
+	setCustomGunOffset( cg.weaponSelect );
 }
 
 /*
@@ -2512,6 +2524,7 @@ void CG_OutOfAmmoChange( void ) {
 		{
 			SetWeaponSelectTime();
 			cg.weaponSelect = i;
+			setCustomGunOffset ( cg.weaponSelect );
 			break;
 		}
 	}
@@ -2532,6 +2545,7 @@ void CG_OutOfAmmoChange( void ) {
 				{
 					SetWeaponSelectTime();
 					cg.weaponSelect = i;
+					setCustomGunOffset ( cg.weaponSelect );
 					break;
 				}
 			}
@@ -2543,6 +2557,7 @@ void CG_OutOfAmmoChange( void ) {
 	{
 		SetWeaponSelectTime();
 		cg.weaponSelect = WP_STUN_BATON;
+		setCustomGunOffset ( cg.weaponSelect );
 	}
 }
 
@@ -2945,5 +2960,29 @@ void CG_MissileHitPlayer( centity_t *cent, int weapon, vec3_t origin, vec3_t dir
 			theFxScheduler.PlayEffect( "atst/side_main_impact", origin, dir );
 		}
 		break;
+	}
+}
+
+void resetGunOffsets (void)
+{
+	cg_gun_x.value = 0;
+	cg_gun_y.value = 0;
+	cg_gun_z.value = 0;
+}
+
+void setCustomGunOffset (int weaponNumber)
+{
+	switch (weaponNumber)
+	{
+		case WP_ROCKET_LAUNCHER:
+			cg_gun_x.value = -4;
+			cg_gun_y.value = -3;
+			cg_gun_z.value = 4;
+			break;
+		default:
+			cg_gun_x.value = 0;
+			cg_gun_y.value = 0;
+			cg_gun_z.value = 0;
+			break;
 	}
 }

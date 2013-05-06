@@ -7597,6 +7597,31 @@ void WP_ForcePowerRegenerate( gentity_t *self, int overrideAmt )
 	}
 }
 
+//Armor regeneration after taking damage
+void ArmorRegenerate( gentity_t *self, int mod)
+{
+	//Let's not give shield regeneration to the NPCs, it defeats the purpose of this
+	if ( !self->client || self-> NPC)
+	{
+		return;
+	}
+
+		
+	if ( self->client->ps.stats[STAT_ARMOR] < self->client->ps.stats[STAT_MAX_HEALTH] )
+	{
+		if ( self->client->ps.rechargeTime < level.time)
+		{
+			self->client->ps.stats[STAT_ARMOR] += 1;
+			//The more damaged your shields are the slower they are going to start regenerating
+			self->client->ps.rechargeTime = level.time + (150 - self->client->ps.stats[STAT_ARMOR]);
+			if ( self->client->ps.stats[STAT_ARMOR] > self->client->ps.stats[STAT_MAX_HEALTH] )
+			{
+				self->client->ps.stats[STAT_ARMOR] = self->client->ps.stats[STAT_MAX_HEALTH];
+			}
+		}
+	}
+}
+
 void WP_ForcePowerDrain( gentity_t *self, forcePowers_t forcePower, int overrideAmt )
 {
 	if ( self->NPC )

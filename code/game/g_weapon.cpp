@@ -31,7 +31,9 @@ This file is part of Jedi Knight 2.
 
 static	vec3_t	wpForward, wpVright, wpUp;
 static	vec3_t	wpMuzzle;
+static	float	spread, alt_spread;
 
+void CalculateSpreads (gentity_t *ent, float main_spread, float alternative_spread);
 void drop_charge(gentity_t *ent, vec3_t start, vec3_t dir);
 void ViewHeightFix( const gentity_t * const ent );
 qboolean LogAccuracyHit( gentity_t *target, gentity_t *attacker );
@@ -43,22 +45,22 @@ static gentity_t *ent_list[MAX_GENTITIES];
 
 // Bryar Pistol
 //--------
-#define BRYAR_PISTOL_VEL			1800
+#define BRYAR_PISTOL_VEL			3500
 #define BRYAR_PISTOL_DAMAGE			14
 #define BRYAR_CHARGE_UNIT			200.0f	// bryar charging gives us one more unit every 200ms--if you change this, you'll have to do the same in bg_pmove
 
 // E11 Blaster
 //---------
-#define BLASTER_MAIN_SPREAD			0.5f
-#define BLASTER_ALT_SPREAD			1.5f
-#define BLASTER_NPC_SPREAD			0.5f
-#define BLASTER_VELOCITY			2300
+#define BLASTER_MAIN_SPREAD			1.5f
+#define BLASTER_ALT_SPREAD			0.1f
+#define BLASTER_NPC_SPREAD			0.2f
+#define BLASTER_VELOCITY			3500
 #define BLASTER_NPC_VEL_CUT			0.5f
 #define BLASTER_NPC_HARD_VEL_CUT	0.7f
 #define BLASTER_DAMAGE				20
-#define	BLASTER_NPC_DAMAGE_EASY		6
-#define	BLASTER_NPC_DAMAGE_NORMAL	12 // 14
-#define	BLASTER_NPC_DAMAGE_HARD		16 // 18
+#define	BLASTER_NPC_DAMAGE_EASY		7
+#define	BLASTER_NPC_DAMAGE_NORMAL	14
+#define	BLASTER_NPC_DAMAGE_HARD		18 
 
 // Tenloss Disruptor
 //----------
@@ -77,7 +79,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 // Wookie Bowcaster
 //----------
 #define	BOWCASTER_DAMAGE			45
-#define	BOWCASTER_VELOCITY			1300
+#define	BOWCASTER_VELOCITY			2300
 #define	BOWCASTER_NPC_DAMAGE_EASY	12
 #define	BOWCASTER_NPC_DAMAGE_NORMAL	24
 #define	BOWCASTER_NPC_DAMAGE_HARD	36
@@ -85,7 +87,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 #define BOWCASTER_SPLASH_RADIUS		0
 #define BOWCASTER_SIZE				2
 
-#define BOWCASTER_ALT_SPREAD		5.0f
+#define BOWCASTER_ALT_SPREAD		1.0f
 #define BOWCASTER_VEL_RANGE			0.3f
 #define BOWCASTER_CHARGE_UNIT		200.0f	// bowcaster charging gives us one more unit every 200ms--if you change this, you'll have to do the same in bg_pmove
 
@@ -494,32 +496,29 @@ void FireSeeker( gentity_t *owner, gentity_t *target, vec3_t origin, vec3_t dir 
 static void WP_FireBryarPistol( gentity_t *ent, qboolean alt_fire )
 //---------------------------------------------------------
 {
-	vec3_t	start;
+	vec3_t	start, angs;
 	int		damage = BRYAR_PISTOL_DAMAGE;
 
+	vectoangles( wpForward, angs );
 	VectorCopy( wpMuzzle, start );
 	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
 
-	if ( ent->NPC && ent->NPC->currentAim < 5 )
-	{
-		vec3_t	angs;
+	CalculateSpreads (ent, BLASTER_MAIN_SPREAD, BLASTER_ALT_SPREAD);
 
-		vectoangles( wpForward, angs );
-
-		if ( ent->client->NPC_class == CLASS_IMPWORKER )
+	if ( ent->client->NPC_class == CLASS_IMPWORKER )
 		{//*sigh*, hack to make impworkers less accurate without affecteing imperial officer accuracy
-			angs[PITCH] += ( crandom() * (BLASTER_NPC_SPREAD+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
-			angs[YAW]	+= ( crandom() * (BLASTER_NPC_SPREAD+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
+			angs[PITCH] += ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
+			angs[YAW]	+= ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
 		}
-		else
+	else
 		{
-			angs[PITCH] += ( crandom() * ((5-ent->NPC->currentAim)*0.25f) );
-			angs[YAW]	+= ( crandom() * ((5-ent->NPC->currentAim)*0.25f) );
+			angs[PITCH] += crandom() * alt_spread;
+			angs[YAW]	+= crandom() * alt_spread;
 		}
 
-		AngleVectors( angs, wpForward, NULL, NULL );
-	}
-
+	
+	AngleVectors( angs, wpForward, NULL, NULL );
+	
 	gentity_t	*missile = CreateMissile( start, wpForward, BRYAR_PISTOL_VEL, 10000, ent, alt_fire );
 
 	missile->classname = "bryar_proj";
@@ -630,11 +629,11 @@ static void WP_FireBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qbo
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 	if ( altFire )
 	{
-		missile->methodOfDeath = MOD_BLASTER_ALT;
+		missile->methodOfDeath = MOD_BLASTER;
 	}
 	else
 	{
-		missile->methodOfDeath = MOD_BLASTER;
+		missile->methodOfDeath = MOD_BLASTER_ALT;
 	}
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
 
@@ -650,29 +649,29 @@ static void WP_FireBlaster( gentity_t *ent, qboolean alt_fire )
 
 	vectoangles( wpForward, angs );
 
+	CalculateSpreads ( ent, BLASTER_MAIN_SPREAD, BLASTER_ALT_SPREAD);
+		
 	if ( alt_fire )
-	{
-		// add some slop to the alt-fire direction
-		angs[PITCH] += crandom() * BLASTER_ALT_SPREAD;
-		angs[YAW]	+= crandom() * BLASTER_ALT_SPREAD;
-	}
-	else
 	{
 		// Troopers use their aim values as well as the gun's inherent inaccuracy
 		// so check for all classes of stormtroopers and anyone else that has aim error
-		if ( ent->client && ent->NPC &&
-			( ent->client->NPC_class == CLASS_STORMTROOPER ||
-			ent->client->NPC_class == CLASS_SWAMPTROOPER ) )
+		if ( ent->client && ent->NPC && ( ent->client->NPC_class == CLASS_STORMTROOPER || ent->client->NPC_class == CLASS_SWAMPTROOPER ) )
 		{
-			angs[PITCH] += ( crandom() * (BLASTER_NPC_SPREAD+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
-			angs[YAW]	+= ( crandom() * (BLASTER_NPC_SPREAD+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
+			angs[PITCH] += ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
+			angs[YAW]	+= ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
 		}
 		else
 		{
 			// add some slop to the main-fire direction
-			angs[PITCH] += crandom() * BLASTER_MAIN_SPREAD;
-			angs[YAW]	+= crandom() * BLASTER_MAIN_SPREAD;
+			angs[PITCH] += crandom() * alt_spread;
+			angs[YAW]	+= crandom() * alt_spread;
 		}
+	}
+	else
+	{
+		// add some slop to the alt-fire direction
+		angs[PITCH] += crandom() * spread;
+		angs[YAW]	+= crandom() * spread;
 	}
 
 	AngleVectors( angs, dir, NULL, NULL );
@@ -1075,17 +1074,19 @@ static void WP_BowcasterMainFire( gentity_t *ent )
 	for ( int i = 0; i < count; i++ )
 	{
 		// create a range of different velocities
-		vel = BOWCASTER_VELOCITY * ( crandom() * BOWCASTER_VEL_RANGE + 1.0f );
+		vel = BOWCASTER_VELOCITY;
 
 		vectoangles( wpForward, angs );
 
+		CalculateSpreads (ent, BOWCASTER_ALT_SPREAD, BOWCASTER_ALT_SPREAD);
+
 		// add some slop to the fire direction
-		angs[PITCH] += crandom() * BOWCASTER_ALT_SPREAD * 0.2f;
-		angs[YAW]	+= ((i+0.5f) * BOWCASTER_ALT_SPREAD - count * 0.5f * BOWCASTER_ALT_SPREAD );
+		angs[PITCH] += crandom() * alt_spread;
+		angs[YAW]	+= crandom() * (alt_spread + i * 2.0f);
 		if ( ent->NPC )
 		{
-			angs[PITCH] += ( crandom() * (BLASTER_NPC_SPREAD+(6-ent->NPC->currentAim)*0.25f) );
-			angs[YAW]	+= ( crandom() * (BLASTER_NPC_SPREAD+(6-ent->NPC->currentAim)*0.25f) );
+			angs[PITCH] += ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f) );
+			angs[YAW]	+= ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f) );
 		}
 		
 		AngleVectors( angs, dir, NULL, NULL );
@@ -4011,4 +4012,46 @@ void SP_emplaced_gun( gentity_t *ent )
 	ent->e_UseFunc = useF_emplaced_gun_use;
 
 	gi.linkentity (ent);
+}
+
+static void CalculateSpreads (gentity_t *ent, float main_spread, float alternative_spread)
+{
+	//If player is ducking
+	if ( ent->client->usercmd.upmove < 0 && ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
+	{
+		//If player is perfectly still while ducking (best accuracy possible)
+		alt_spread = alternative_spread;
+		spread = main_spread;
+		//If player is moving while ducking (nobody can shoot right while ducking and moving, so accuracy goes to hell)
+		if ( ent->client->usercmd.forwardmove != 0 || ent->client->usercmd.rightmove != 0 )
+		{
+			alt_spread = alternative_spread + 2.0f;
+			spread = main_spread + 2.0f;
+		}
+	}
+	//If player is standing
+	if ( ent->client->usercmd.upmove == 0 && ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
+	{
+		//If player is standing still (just a little less than ducking still)
+		alt_spread = alternative_spread + 0.15f;
+		spread = main_spread + 0.15f;
+		//If player is walking (accuracy decreases just a bit)
+		if ( ent->client->usercmd.forwardmove != 0 || ent->client->usercmd.rightmove != 0 )
+		{
+			alt_spread = alternative_spread + 0.25f;
+			spread = main_spread + 0.25f;
+		}
+		//If player is running (you shouldn't be running and shooting at the same time, but for now let's send accuracy to hell)
+		if ( ent->client->usercmd.forwardmove > 64 || ent->client->usercmd.forwardmove < -64 || ent->client->usercmd.rightmove > 64 || ent->client->usercmd.rightmove < -64 )
+		{
+			alt_spread = alternative_spread + 2.0f;
+			spread = main_spread + 2.0f;
+		}
+	}
+	//If player is jumping or in the air (under any circumstances you can be on the air and hit something)
+	if ( ent->client->usercmd.upmove > 0 || ent->client->ps.groundEntityNum == ENTITYNUM_NONE)
+	{
+		alt_spread = alternative_spread + 3.0f;
+		spread = main_spread + 3.0f;
+	}
 }

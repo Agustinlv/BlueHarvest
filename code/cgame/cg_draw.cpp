@@ -1030,6 +1030,11 @@ static void CG_DrawZoomMask( void )
 	//--------------------------------
 	else if ( cg.zoomMode == 2 )
 	{
+		if (cg.snap->ps.weapon != WP_DISRUPTOR)
+		{
+			return;
+		}
+		
 		level = (float)(80.0f - cg_zoomFov) / 80.0f;
 
 		// ...so we'll clamp it
@@ -1323,7 +1328,7 @@ static void CG_DrawCrosshair( vec3_t worldPoint )
 		return;
 	}
 
-	if ( cg.zoomMode > 0 && cg.zoomMode < 3 )
+	if ( cg.zoomMode != 0 && (cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR) )
 	{
 		//not while scoped
 		return;
@@ -2324,7 +2329,7 @@ static void CG_Draw2D( void )
 
 		CG_DrawWeaponSelect();
 
-		if ( cg.zoomMode == 0 )
+		if ( (cg.zoomMode == 0)  || ((cg.zoomMode == 2) && (cg.snap->ps.weapon != WP_DISRUPTOR)) )
 		{
 			CG_DrawStats();
 		}

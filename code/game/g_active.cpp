@@ -44,6 +44,7 @@ extern void WP_SaberReflectCheck( gentity_t *self, usercmd_t *ucmd  );
 extern void WP_SaberUpdate( gentity_t *self, usercmd_t *ucmd );
 extern void WP_SaberStartMissileBlockCheck( gentity_t *self, usercmd_t *ucmd  );
 extern void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd );
+extern void ArmorRegenerate( gentity_t *self, int mod );
 extern void WP_SaberInitBladeData( gentity_t *ent );
 extern gentity_t *SeekerAcquiresTarget ( gentity_t *ent, vec3_t pos );
 extern void FireSeeker( gentity_t *owner, gentity_t *target, vec3_t origin, vec3_t dir );
@@ -2140,14 +2141,14 @@ extern cvar_t	*g_skippingcin;
 //			ucmd->angles[PITCH] = 0;
 //		}
 
-		if ( cg.zoomMode == 2 )
+		if ( (cg.zoomMode == 2))
 		{
-			// Any kind of movement when the player is NOT ducked when the disruptor gun is zoomed will cause us to auto-magically un-zoom
-			if ( ( (ucmd->forwardmove||ucmd->rightmove) 
+			//Any kind of movement when the player is NOT ducked when the disruptor gun is zoomed will cause us to auto-magically un-zoom
+			if ( /*( (ucmd->forwardmove||ucmd->rightmove) 
 				   && ucmd->upmove >= 0 //crouching-moving is ok
-				   && !(ucmd->buttons&BUTTON_USE)/*leaning is ok*/ 
+				   && !(ucmd->buttons&BUTTON_USE)//leaning is ok
 				 ) 
-				 || ucmd->upmove > 0 //jumping not allowed
+				 || */ cg.snap->ps.weapon == WP_DISRUPTOR && ucmd->upmove > 0 //jumping not allowed
 			   )
 			{
 				// already zooming, so must be wanting to turn it off
@@ -2155,6 +2156,8 @@ extern cvar_t	*g_skippingcin;
 				cg.zoomMode = 0;
 				cg.zoomTime = cg.time;
 				cg.zoomLocked = qfalse;
+				cg_gun_z.value = 0;
+				cg_gun_y.value = 0;
 			}
 		}
 
@@ -2170,14 +2173,14 @@ extern cvar_t	*g_skippingcin;
 			ucmd->upmove = 0;
 			PM_AdjustAnglesToGripper( ent, ucmd );
 		}
-		if ( ent->client->ps.leanofs )
+		/*if ( ent->client->ps.leanofs )
 		{//no shooting while leaning
 			ucmd->buttons &= ~BUTTON_ATTACK;
 			if ( ent->client->ps.weapon != WP_DISRUPTOR )
 			{//can still zoom around corners
 				ucmd->buttons &= ~BUTTON_ALT_ATTACK;
 			}
-		}
+		}*/
 	}
 	else
 	{
@@ -2686,6 +2689,8 @@ extern cvar_t	*g_skippingcin;
 		ent->client->ps.saberBlockingTime = level.time + FRAMETIME;
 	}
 	WP_ForcePowersUpdate( ent, ucmd );
+	ArmorRegenerate( ent, 0 );
+
 	//if we have the saber in hand, check for starting a block to reflect shots
 	WP_SaberStartMissileBlockCheck( ent, ucmd  );
 	// Update the position of the saber, and check to see if we're throwing it

@@ -5548,7 +5548,7 @@ static void PM_BeginWeaponChange( int weapon ) {
 	// turn of any kind of zooming when weapon switching....except the LA Goggles
 	if ( pm->ps->clientNum == 0 )
 	{
-		if ( cg.zoomMode > 0 && cg.zoomMode < 3 )
+		if ( cg.zoomMode > 0 && cg.zoomMode != 3 )
 		{
 			cg.zoomMode = 0;
 			cg.zoomTime = cg.time;
@@ -8174,7 +8174,15 @@ static void PM_Weapon( void )
 			break;
 
 		case WP_BLASTER:
-			PM_SetAnim( pm, SETANIM_TORSO, BOTH_ATTACK3, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD|SETANIM_FLAG_RESTART);
+			if ( (pm->ps->clientNum && pm->gent && pm->gent->NPC && (pm->gent->NPC->scriptFlags&SCF_ALT_FIRE)) ||
+				(!pm->ps->clientNum && cg.zoomMode == 4 ) )
+			{//NPC or player in alt-fire, sniper mode
+				PM_SetAnim( pm, SETANIM_TORSO, BOTH_ATTACK4, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD|SETANIM_FLAG_RESTART);
+			}
+			else
+			{//in primary fire mode, firing from the hip
+				PM_SetAnim( pm, SETANIM_TORSO, BOTH_ATTACK3, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD|SETANIM_FLAG_RESTART);
+			}
 			break;
 
 		case WP_DISRUPTOR:
@@ -8569,38 +8577,47 @@ void PM_AdjustAttackStates( pmove_t *pm )
 	}
 
 	// disruptor alt-fire should toggle the zoom mode, but only bother doing this for the player?
-	if ( pm->ps->weapon == WP_DISRUPTOR && pm->gent && pm->gent->s.number == 0 && pm->ps->weaponstate != WEAPON_DROPPING )
+	if ( (pm->ps->weapon == WP_BLASTER || pm->ps->weapon == WP_DISRUPTOR || pm->ps->weapon == WP_BOWCASTER) && pm->gent && pm->gent->s.number == 0 && pm->ps->weaponstate != WEAPON_DROPPING )
 	{
-		// we are not alt-firing yet, but the alt-attack button was just pressed and
-		//	we either are ducking ( in which case we don't care if they are moving )...or they are not ducking...and also not moving right/forward.
-		if ( !(pm->ps->eFlags & EF_ALT_FIRING) && (pm->cmd.buttons & BUTTON_ALT_ATTACK)
-				&& ( pm->cmd.upmove < 0 || ( !pm->cmd.forwardmove && !pm->cmd.rightmove )))
+		//we are not alt-firing yet, but the alt-attack button was just pressed
+		if ( (!(pm->ps->eFlags & EF_ALT_FIRING) && (pm->cmd.buttons & BUTTON_ALT_ATTACK) && pm->ps->weapon != WP_DISRUPTOR) || (!(pm->ps->eFlags & EF_ALT_FIRING) && (pm->cmd.buttons & BUTTON_ALT_ATTACK) && pm->ps->weapon == WP_DISRUPTOR && pm->ps->groundEntityNum != ENTITYNUM_NONE && pm->cmd.upmove <= 0))
 		{
 			// We just pressed the alt-fire key
-			if ( cg.zoomMode == 0 || cg.zoomMode == 3 )
+			if ( cg.zoomMode == 0 )
 			{
 				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomstart.wav" );
 				// not already zooming, so do it now
-				cg.zoomMode = 2;
-				cg.zoomLocked = qfalse;
-				cg_zoomFov = 80.0f;//(cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
-			}
-			else if ( cg.zoomMode == 2 )
-			{
-				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomend.wav" );
-				// already zooming, so must be wanting to turn it off
-				cg.zoomMode = 0;
-				cg.zoomTime = cg.time;
-				cg.zoomLocked = qfalse;
+				//if (pm->ps->weapon == WP_DISRUPTOR)
+				//{
+					cg.zoomMode = 2;
+					cg.zoomTime = cg.time;
+					cg.zoomLocked = qtrue;
+					if (pm->ps->weapon == WP_DISRUPTOR)
+					{
+						cg_zoomFov = 20.0f;
+					}
+					else
+					{
+						cg_zoomFov = 60.0f;//(cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
+						cg_gun_z.value = 3;//Brings the weapon closer to the eye level
+						cg_gun_y.value = 2;
+					}
 			}
 		}
+		//Releasing the alt fire button releases the zoom.
 		else if ( !(pm->cmd.buttons & BUTTON_ALT_ATTACK ))
 		{
 			// Not pressing zoom any more
-			if ( cg.zoomMode == 2 )
+			if (cg.zoomMode == 2)
 			{
 				// were zooming in, so now lock the zoom
-				cg.zoomLocked = qtrue;
+				//cg.zoomLocked = qtrue;
+				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomend.wav" );
+				cg.zoomMode = 0;
+				cg.zoomTime = cg.time;
+				cg.zoomLocked = qfalse;
+				cg_gun_z.value = 0;
+				cg_gun_y.value = 0;
 			}
 		}
 
@@ -8693,9 +8710,9 @@ void PM_AdjustAttackStates( pmove_t *pm )
 	}
 
 	// disruptor should convert a main fire to an alt-fire if the gun is currently zoomed
-	if ( pm->ps->weapon == WP_DISRUPTOR && pm->gent && pm->gent->s.number == 0 )
+	if ( (pm->ps->weapon == WP_DISRUPTOR || pm->ps->weapon == WP_BLASTER || pm->ps->weapon == WP_BOWCASTER) && pm->gent && pm->gent->s.number == 0 )
 	{
-		if ( pm->cmd.buttons & BUTTON_ATTACK && cg.zoomMode == 2 )
+		if ( pm->cmd.buttons & BUTTON_ATTACK && cg.zoomMode == 2)
 		{
 			// converting the main fire to an alt-fire
 			pm->cmd.buttons |= BUTTON_ALT_ATTACK;

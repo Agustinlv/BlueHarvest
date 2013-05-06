@@ -361,14 +361,14 @@ qboolean	BG_CanItemBeGrabbed( const entityState_t *ent, const playerState_t *ps 
 		if ( ps->stats[STAT_ARMOR] >= ps->stats[STAT_MAX_HEALTH] ) {
 			return qfalse;
 		}
-		return qtrue;
+		return qfalse;
 
 	case IT_HEALTH:
 		// don't pick up if already at max
 		if ( ps->stats[STAT_HEALTH] >= ps->stats[STAT_MAX_HEALTH] ) {
 			return qfalse;
 		}
-		return qtrue;
+		return qfalse;
 
 	case IT_BATTERY:
 		// don't pick up if already at max
