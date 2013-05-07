@@ -523,11 +523,19 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		break;
 
 	case EV_FIRE_WEAPON:
+		if ((cent->gent->client->usercmd.forwardmove > 64 && cent->gent->client->usercmd.rightmove == 0 && cg.zoomMode == 0 && cent->gent->client->ps.stats[STAT_STAMINA] > 0) || cent->gent->client->usercmd.upmove > 0)
+		{
+			break;
+		}
 		DEBUGNAME("EV_FIRE_WEAPON");
 		CG_FireWeapon( cent, qfalse );
 		break;
 
 	case EV_ALT_FIRE:
+		if ((cent->gent->client->usercmd.forwardmove > 64 && cent->gent->client->usercmd.rightmove == 0 && cg.zoomMode == 0 && cent->gent->client->ps.stats[STAT_STAMINA] > 0 ) || cent->gent->client->usercmd.upmove > 0)
+		{
+			break;
+		}
 		DEBUGNAME("EV_ALT_FIRE");
 		CG_FireWeapon( cent, qtrue );
 		break;

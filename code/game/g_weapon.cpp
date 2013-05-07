@@ -4042,7 +4042,7 @@ static void CalculateSpreads (gentity_t *ent, float main_spread, float alternati
 			spread = main_spread + 0.25f;
 		}
 		//If player is running (you shouldn't be running and shooting at the same time, but for now let's send accuracy to hell)
-		if ( ent->client->usercmd.forwardmove > 64 || ent->client->usercmd.forwardmove < -64 || ent->client->usercmd.rightmove > 64 || ent->client->usercmd.rightmove < -64 )
+		if ( abs(ent->client->usercmd.forwardmove) > 64 || abs(ent->client->usercmd.rightmove) > 64)
 		{
 			alt_spread = alternative_spread + 2.0f;
 			spread = main_spread + 2.0f;

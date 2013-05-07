@@ -1186,6 +1186,20 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 
 	while ( client->timeResidual >= 1000 ) 
 	{
+		if (client->usercmd.forwardmove > 64 && client->usercmd.rightmove == 0) {
+			client->ps.stats[STAT_STAMINA] -= 1;
+			if (client->ps.stats[STAT_STAMINA] < 0)
+			{
+				client->ps.stats[STAT_STAMINA] = 0;
+			}
+		}
+
+		if ( client->ps.stats[STAT_STAMINA] < 3 && !(client->usercmd.forwardmove > 64 && client->usercmd.rightmove == 0)) {
+			client->ps.stats[STAT_STAMINA] += 1;
+			if ( client->ps.stats[STAT_STAMINA] > 3 ) {
+				client->ps.stats[STAT_STAMINA] = 3;
+			}
+		}
 		client->timeResidual -= 1000;
 
 		if ( ent->s.weapon != WP_NONE )
@@ -1280,6 +1294,11 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 				gi.Printf( "DOUBLE EV_FIRE_WEAPON AND-OR EV_ALT_FIRE!!\n" );
 			}
 #endif
+			if ((ent->client->usercmd.forwardmove > 64 && ent->client->usercmd.rightmove == 0 && cg.zoomMode == 0 && ent->client->ps.stats[STAT_STAMINA] > 0) || ent->client->usercmd.upmove > 0)
+			{
+				fired = qfalse;
+				break;
+			}
 			fired = qtrue;
 			FireWeapon( ent, qfalse );
 			break;
@@ -1290,6 +1309,11 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 				gi.Printf( "DOUBLE EV_FIRE_WEAPON AND-OR EV_ALT_FIRE!!\n" );
 			}
 #endif
+			if ((ent->client->usercmd.forwardmove > 64 && ent->client->usercmd.rightmove == 0 && cg.zoomMode == 0 && ent->client->ps.stats[STAT_STAMINA] > 0) || ent->client->usercmd.upmove > 0)
+			{
+				fired = qfalse;
+				break;
+			}
 			fired = qtrue;
 			FireWeapon( ent, qtrue );
 			break;

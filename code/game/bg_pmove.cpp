@@ -1851,7 +1851,7 @@ PM_WalkMove
 static void PM_WalkMove( void ) {
 	int			i;
 	vec3_t		wishvel;
-	float		fmove, smove;
+	float		fmove, smove, umove;
 	vec3_t		wishdir;
 	float		wishspeed;
 	float		scale;
@@ -1916,6 +1916,7 @@ static void PM_WalkMove( void ) {
 
 	fmove = pm->cmd.forwardmove;
 	smove = pm->cmd.rightmove;
+	umove = pm->cmd.upmove;
 
 	cmd = pm->cmd;
 	scale = PM_CmdScale( &cmd );
@@ -1982,10 +1983,50 @@ static void PM_WalkMove( void ) {
 		accelerate = pm_accelerate;
 	}
 
+	//--------------------------------------------------------------
+	//A little hack to modify the default walking speeds of the game
+	//--------------------------------------------------------------
+	//If the player is not in any zooming mode then we can modify the walk speed to be a little faster and run straight speed to feel like it's actually sprinting
+	if (cg.zoomMode == 0) {
+		if (fmove != 0 || smove != 0) {
+			if (abs(fmove) <= 64 && abs(smove) <= 64) {
+				wishspeed += 54;
+			}			
+			//If the player is running straight I want it to feel more like a real sprint, not a fast jog
+			if (fmove > 64 && smove == 0) {
+				if ( pm->ps->stats[STAT_STAMINA] - 1 > 0) {
+					wishspeed += 100;
+				} else {
+					wishspeed -=70;
+				}
+			}
+			//This means is running sideways or backwards. If so, then I'll bring the speed down to a fast walk
+			if (abs(smove) > 64 && fmove >= -64) {
+				wishspeed -=70;
+			}
+			//Is trying to run backwards. No sir.
+			if (fmove < -64) {
+				wishspeed -=7;
+			}
+		}
+	//The player is on some zoom mode, so the speeds will be all the same regardless his trying to run or not
+	} else {
+		if (abs(fmove) > 64 || abs(smove) > 64) {
+			if (fmove < -64) {
+				wishspeed -= 87;
+			}
+			else {
+				wishspeed -= 150;
+			}
+		} else {
+			wishspeed -=26;
+		}
+	}
+	
 	PM_Accelerate (wishdir, wishspeed, accelerate);
 
 	//Com_Printf("velocity = %1.1f %1.1f %1.1f\n", pm->ps->velocity[0], pm->ps->velocity[1], pm->ps->velocity[2]);
-	//Com_Printf("velocity1 = %1.1f\n", VectorLength(pm->ps->velocity));
+	//Com_Printf("Stamina = %1.1\n", pm->ps->stats[STAT_ARMOR]);
 
 	if ( ( pml.groundTrace.surfaceFlags & SURF_SLICK ) || pm->ps->pm_flags & PMF_TIME_KNOCKBACK || (pm->ps->pm_flags&PMF_TIME_NOFRICTION) ) {
 		if ( pm->ps->gravity >= 0 && pm->ps->groundEntityNum != ENTITYNUM_NONE && !VectorLengthSquared( pm->ps->velocity ) && pml.groundTrace.plane.normal[2] == 1.0 )
@@ -7958,6 +7999,12 @@ static void PM_Weapon( void )
 	int			addTime, amount, trueCount = 1;
 	qboolean	delayed_fire = qfalse;
 
+	//If player is sprinting forward, then no firing can be done
+	if ((pm->gent->client->usercmd.forwardmove > 64 && pm->gent->client->usercmd.rightmove == 0 && cg.zoomMode == 0 && pm->gent->client->ps.stats[STAT_STAMINA] > 0) || pm->gent->client->usercmd.upmove > 0)
+	{
+		return;
+	}
+	
 	if (pm->ps->weapon == WP_SABER && (cg.zoomMode==3||!cg.zoomMode||pm->ps->clientNum) )		// WP_LIGHTSABER
 	{	// Separate logic for lightsaber, but not for player when zoomed
 		PM_WeaponLightsaber();
