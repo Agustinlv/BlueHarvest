@@ -107,12 +107,12 @@ const float	pm_duckScale = 0.50f;
 const float	pm_swimScale = 0.50f;
 float	pm_ladderScale = 0.7f;
 
-const float	pm_accelerate = 12.0f;
+const float	pm_accelerate = 190.0f;
 const float	pm_airaccelerate = 4.0f;
 const float	pm_wateraccelerate = 4.0f;
 const float	pm_flyaccelerate = 8.0f;
 
-const float	pm_friction = 6.0f;
+const float	pm_friction = 200.0f;
 const float	pm_waterfriction = 1.0f;
 const float	pm_flightfriction = 3.0f;
 
@@ -231,6 +231,7 @@ Slide off of the impacting surface
 void PM_ClipVelocity( vec3_t in, vec3_t normal, vec3_t out, float overbounce ) {
 	float	backoff;
 	float	change;
+	//float	oldInZ;
 	int		i;
 	
 	backoff = DotProduct (in, normal);
@@ -246,6 +247,16 @@ void PM_ClipVelocity( vec3_t in, vec3_t normal, vec3_t out, float overbounce ) {
 		change = normal[i]*backoff;
 		out[i] = in[i] - change;
 	}
+	
+	/*if ( pm->ps->clientNum < MAX_CLIENTS//normal player
+		&& normal[2] < MIN_WALK_NORMAL )//sliding against a steep slope
+		{
+			if ( pm->ps->groundEntityNum != ENTITYNUM_NONE )//on the ground
+			{//if walking on the ground, don't slide up slopes that are too steep to walk on
+				out[2] = oldInZ;
+			}
+		}*/
+
 }
 
 
@@ -289,10 +300,6 @@ static void PM_Friction( void ) {
 				// if getting knocked back, no friction	
 				if ( !(pm->ps->pm_flags & PMF_TIME_KNOCKBACK) && !(pm->ps->pm_flags & PMF_TIME_NOFRICTION) ) 
 				{
-					//If the use key is pressed. slow the player more quickly
-					if ( pm->cmd.buttons & BUTTON_USE )
-						friction *= pm_frictionModifier;
-					
 					control = speed < pm_stopspeed ? pm_stopspeed : speed;
 					drop += control*friction*pml.frametime;
 				}
@@ -350,20 +357,26 @@ static void PM_Accelerate( vec3_t wishdir, float wishspeed, float accel )
 	int			i;
 	float		addspeed, accelspeed, currentspeed;
 
-	currentspeed = DotProduct (pm->ps->velocity, wishdir);
+	//currentspeed = DotProduct (pm->ps->velocity, wishdir); This is actually wrong. The current speed is the vector lenght of the velocity vector. Booo to you Raven!
+	//Corto
+	//I don't know what these guys where thinking, but using the dotproduct between the velocity vector and the direction vector
+	//to calculate the current speed is WRONG. The solution to this problem was here and only all the fucking time
+	currentspeed = VectorLength (pm->ps->velocity);
 
 	addspeed = wishspeed - currentspeed;
 	
 	if (addspeed <= 0) {
 		return;
 	}
+	
 	accelspeed = ( accel * pml.frametime ) * wishspeed;
 
 	if (accelspeed > addspeed) {
 		accelspeed = addspeed;
 	}
+	
 	for (i=0 ; i<3 ; i++) {
-		pm->ps->velocity[i] += accelspeed * wishdir[i];	
+		pm->ps->velocity[i] += accelspeed * wishdir[i];
 	}
 }
 
@@ -1914,6 +1927,13 @@ static void PM_WalkMove( void ) {
 		PM_Friction ();
 	}
 
+	//Corto
+	//WTF? I had to put this in here or otherwise I couldn't be able to stop from sprinting and strafing at the same time.
+	//If there's a better way to do this, go ahead.
+	if (cg.zoomMode == 0 && pm->cmd.forwardmove > 64) {
+			pm->cmd.rightmove = 0;
+	}
+	
 	fmove = pm->cmd.forwardmove;
 	smove = pm->cmd.rightmove;
 	umove = pm->cmd.upmove;
@@ -1937,10 +1957,23 @@ static void PM_WalkMove( void ) {
 
 	if ( pm->ps->clientNum && !VectorCompare( pm->ps->moveDir, vec3_origin ) )
 	{//NPC
-		//FIXME: what if the ucmd was set directly.... sigh.... check movedir timestamp?
-		VectorScale( pm->ps->moveDir, pm->ps->speed, wishvel );
-		VectorCopy( pm->ps->moveDir, wishdir );
-		wishspeed = pm->ps->speed;
+		if ((fmove!=0.0f || smove!=0.0f) &&	VectorCompare(pm->ps->moveDir, vec3_origin)) {
+			//gi.Printf("Generating MoveDir\n");
+			for ( i = 0 ; i < 3 ; i++ ) {
+				wishvel[i] = pml.forward[i]*fmove + pml.right[i]*smove;
+			}
+
+			VectorCopy( wishvel, wishdir );
+			wishspeed = VectorNormalize(wishdir);
+			wishspeed *= scale;
+		}
+		// Otherwise, Use The Move Dir
+		//-----------------------------
+		else {
+			wishspeed = pm->ps->speed;
+			VectorScale( pm->ps->moveDir, pm->ps->speed, wishvel );
+			VectorCopy( pm->ps->moveDir, wishdir );
+		}
 	}
 	else
 	{
@@ -1982,52 +2015,50 @@ static void PM_WalkMove( void ) {
 	} else {
 		accelerate = pm_accelerate;
 	}
-
-	//--------------------------------------------------------------
+		
+	//Corto
 	//A little hack to modify the default walking speeds of the game
-	//--------------------------------------------------------------
 	//If the player is not in any zooming mode then we can modify the walk speed to be a little faster and run straight speed to feel like it's actually sprinting
-	if (cg.zoomMode == 0) {
-		if (fmove != 0 || smove != 0) {
+	//I don't want this to affect NPCs either, it fucks up their behavior
+	if (!(pm->gent->NPC))
+	{
+		if (cg.zoomMode == 0) {
 			if (abs(fmove) <= 64 && abs(smove) <= 64) {
-				wishspeed += 54;
+				wishspeed += 44;
 			}			
-			//If the player is running straight I want it to feel more like a real sprint, not a fast jog
-			if (fmove > 64 && smove == 0) {
-				if ( pm->ps->stats[STAT_STAMINA] - 1 > 0) {
-					wishspeed += 100;
-				} else {
-					wishspeed -=70;
-				}
+			//If the player is running straight he cannot run sideways and the speed is more like a real sprint, not a fast jog
+			if ( fmove > 64 ) {
+				wishspeed += 130;
 			}
-			//This means is running sideways or backwards. If so, then I'll bring the speed down to a fast walk
+			//This means is running sideways. If so, then I'll bring the speed down to a fast walk
 			if (abs(smove) > 64 && fmove >= -64) {
-				wishspeed -=70;
+				wishspeed -= 80;
 			}
 			//Is trying to run backwards. No sir.
 			if (fmove < -64) {
-				wishspeed -=7;
+				wishspeed -= 17;
 			}
-		}
-	//The player is on some zoom mode, so the speeds will be all the same regardless his trying to run or not
-	} else {
-		if (abs(fmove) > 64 || abs(smove) > 64) {
-			if (fmove < -64) {
-				wishspeed -= 87;
-			}
-			else {
-				wishspeed -= 150;
-			}
+		//The player is on some zoom mode, so the speeds will be all the same regardless his trying to run or not
 		} else {
-			wishspeed -=26;
+			if (abs(fmove) > 64 || abs(smove) > 64) {
+				if (fmove < -64) {
+					wishspeed -= 87;
+				}
+				else {
+					wishspeed -= 150;
+				}
+			} else {
+				wishspeed -= 26;
+			}
 		}
 	}
 	
 	PM_Accelerate (wishdir, wishspeed, accelerate);
 
-	//Com_Printf("velocity = %1.1f %1.1f %1.1f\n", pm->ps->velocity[0], pm->ps->velocity[1], pm->ps->velocity[2]);
-	//Com_Printf("Stamina = %1.1\n", pm->ps->stats[STAT_ARMOR]);
-
+	//Com_Printf("out wishdir = %1.1f %1.1f %1.1f\n", wishdir[0], wishdir[1], wishdir[2]);
+	//Com_Printf("out velocity = %1.1f %1.1f %1.1f\n", pm->ps->velocity[0], pm->ps->velocity[1], pm->ps->velocity[2]);
+	//Com_Printf("out speed = %1.1f\n", VectorLength(pm->ps->velocity));
+	
 	if ( ( pml.groundTrace.surfaceFlags & SURF_SLICK ) || pm->ps->pm_flags & PMF_TIME_KNOCKBACK || (pm->ps->pm_flags&PMF_TIME_NOFRICTION) ) {
 		if ( pm->ps->gravity >= 0 && pm->ps->groundEntityNum != ENTITYNUM_NONE && !VectorLengthSquared( pm->ps->velocity ) && pml.groundTrace.plane.normal[2] == 1.0 )
 		{//on ground and not moving and on level ground, no reason to do stupid fucking gravity with the clipvelocity!!!!
@@ -7999,8 +8030,9 @@ static void PM_Weapon( void )
 	int			addTime, amount, trueCount = 1;
 	qboolean	delayed_fire = qfalse;
 
-	//If player is sprinting forward, then no firing can be done
-	if ((pm->gent->client->usercmd.forwardmove > 64 && pm->gent->client->usercmd.rightmove == 0 && cg.zoomMode == 0 && pm->gent->client->ps.stats[STAT_STAMINA] > 0) || pm->gent->client->usercmd.upmove > 0)
+	//Corto
+	//If playing is sprinting it can't shoot or jumping (which is not the same as "in air"), just sprint
+	if ((pm->gent->client->usercmd.forwardmove > 64 && cg.zoomMode == 0) || pm->gent->client->usercmd.upmove > 0)
 	{
 		return;
 	}

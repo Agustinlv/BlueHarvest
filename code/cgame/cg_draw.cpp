@@ -1323,14 +1323,11 @@ static void CG_DrawCrosshair( vec3_t worldPoint )
 	float		f;
 	float		x, y;
 
-	if ( !cg_drawCrosshair.integer ) 
+	//Corto
+	//Ironsights
+	//I modified this check so when zooming though the ironsights the crosshair remains on screen
+	if ( (cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR) || cg.zoomMode == 1 || !cg_drawCrosshair.integer )
 	{
-		return;
-	}
-
-	if ( cg.zoomMode != 0 && (cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR) )
-	{
-		//not while scoped
 		return;
 	}
 
@@ -2329,7 +2326,10 @@ static void CG_Draw2D( void )
 
 		CG_DrawWeaponSelect();
 
-		if ( (cg.zoomMode == 0)  || ((cg.zoomMode == 2) && (cg.snap->ps.weapon != WP_DISRUPTOR)) )
+		//Corto
+		//Ironsights
+		//I modified this check so when zooming though the ironsights the Stats remains on screen
+		if ( (cg.zoomMode == 0)  || (cg.zoomMode == 2 && cg.snap->ps.weapon != WP_DISRUPTOR) )
 		{
 			CG_DrawStats();
 		}

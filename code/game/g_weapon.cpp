@@ -60,7 +60,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 #define BLASTER_DAMAGE				20
 #define	BLASTER_NPC_DAMAGE_EASY		7
 #define	BLASTER_NPC_DAMAGE_NORMAL	14
-#define	BLASTER_NPC_DAMAGE_HARD		18 
+#define	BLASTER_NPC_DAMAGE_HARD		20 
 
 // Tenloss Disruptor
 //----------
@@ -80,9 +80,9 @@ static gentity_t *ent_list[MAX_GENTITIES];
 //----------
 #define	BOWCASTER_DAMAGE			45
 #define	BOWCASTER_VELOCITY			2300
-#define	BOWCASTER_NPC_DAMAGE_EASY	12
-#define	BOWCASTER_NPC_DAMAGE_NORMAL	24
-#define	BOWCASTER_NPC_DAMAGE_HARD	36
+#define	BOWCASTER_NPC_DAMAGE_EASY	15
+#define	BOWCASTER_NPC_DAMAGE_NORMAL	30
+#define	BOWCASTER_NPC_DAMAGE_HARD	45
 #define BOWCASTER_SPLASH_DAMAGE		0
 #define BOWCASTER_SPLASH_RADIUS		0
 #define BOWCASTER_SIZE				2
@@ -93,13 +93,13 @@ static gentity_t *ent_list[MAX_GENTITIES];
 
 // Heavy Repeater
 //----------
-#define REPEATER_SPREAD				1.4f
+#define REPEATER_SPREAD				1.0f
 #define REPEATER_NPC_SPREAD			0.7f
 #define	REPEATER_DAMAGE				8
 #define	REPEATER_VELOCITY			1600
 #define	REPEATER_NPC_DAMAGE_EASY	2
 #define	REPEATER_NPC_DAMAGE_NORMAL	4
-#define	REPEATER_NPC_DAMAGE_HARD	6
+#define	REPEATER_NPC_DAMAGE_HARD	8
 
 #define REPEATER_ALT_SIZE				3	// half of bbox size
 #define	REPEATER_ALT_DAMAGE				60
@@ -126,7 +126,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 
 // Golan Arms Flechette
 //---------
-#define FLECHETTE_SHOTS				6
+#define FLECHETTE_SHOTS				4
 #define FLECHETTE_SPREAD			4.0f
 #define FLECHETTE_DAMAGE			15
 #define FLECHETTE_VEL				3500
@@ -145,7 +145,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 
 // Personal Rocket Launcher
 //---------
-#define	ROCKET_VELOCITY				900
+#define	ROCKET_VELOCITY				3000
 #define	ROCKET_DAMAGE				100
 #define	ROCKET_SPLASH_DAMAGE		100
 #define	ROCKET_SPLASH_RADIUS		160
@@ -504,19 +504,12 @@ static void WP_FireBryarPistol( gentity_t *ent, qboolean alt_fire )
 	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
 
 	CalculateSpreads (ent, BLASTER_MAIN_SPREAD, BLASTER_ALT_SPREAD);
-
-	if ( ent->client->NPC_class == CLASS_IMPWORKER )
-		{//*sigh*, hack to make impworkers less accurate without affecteing imperial officer accuracy
-			angs[PITCH] += ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
-			angs[YAW]	+= ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
-		}
-	else
-		{
-			angs[PITCH] += crandom() * alt_spread;
-			angs[YAW]	+= crandom() * alt_spread;
-		}
-
 	
+	//Corto
+	//Randomizes the spread angles calculated before but everybody benefits from this feature, not only human controlled players
+	angs[PITCH] += crandom() * alt_spread;
+	angs[YAW]	+= crandom() * alt_spread;
+		
 	AngleVectors( angs, wpForward, NULL, NULL );
 	
 	gentity_t	*missile = CreateMissile( start, wpForward, BRYAR_PISTOL_VEL, 10000, ent, alt_fire );
@@ -651,25 +644,14 @@ static void WP_FireBlaster( gentity_t *ent, qboolean alt_fire )
 
 	CalculateSpreads ( ent, BLASTER_MAIN_SPREAD, BLASTER_ALT_SPREAD);
 		
+	//Randomizes the spread angles calculated before
 	if ( alt_fire )
 	{
-		// Troopers use their aim values as well as the gun's inherent inaccuracy
-		// so check for all classes of stormtroopers and anyone else that has aim error
-		if ( ent->client && ent->NPC && ( ent->client->NPC_class == CLASS_STORMTROOPER || ent->client->NPC_class == CLASS_SWAMPTROOPER ) )
-		{
-			angs[PITCH] += ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
-			angs[YAW]	+= ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f));//was 0.5f
-		}
-		else
-		{
-			// add some slop to the main-fire direction
-			angs[PITCH] += crandom() * alt_spread;
-			angs[YAW]	+= crandom() * alt_spread;
-		}
+		angs[PITCH] += crandom() * alt_spread;
+		angs[YAW]	+= crandom() * alt_spread;
 	}
 	else
 	{
-		// add some slop to the alt-fire direction
 		angs[PITCH] += crandom() * spread;
 		angs[YAW]	+= crandom() * spread;
 	}
@@ -4014,6 +3996,8 @@ void SP_emplaced_gun( gentity_t *ent )
 	gi.linkentity (ent);
 }
 
+//Corto
+//Function to calculate the spread angles depending on the player movement or stance
 static void CalculateSpreads (gentity_t *ent, float main_spread, float alternative_spread)
 {
 	//If player is ducking
@@ -4042,11 +4026,11 @@ static void CalculateSpreads (gentity_t *ent, float main_spread, float alternati
 			spread = main_spread + 0.25f;
 		}
 		//If player is running (you shouldn't be running and shooting at the same time, but for now let's send accuracy to hell)
-		if ( abs(ent->client->usercmd.forwardmove) > 64 || abs(ent->client->usercmd.rightmove) > 64)
+		/*if ( abs(ent->client->usercmd.forwardmove) > 64 || abs(ent->client->usercmd.rightmove) > 64)
 		{
 			alt_spread = alternative_spread + 2.0f;
 			spread = main_spread + 2.0f;
-		}
+		}*/
 	}
 	//If player is jumping or in the air (under any circumstances you can be on the air and hit something)
 	if ( ent->client->usercmd.upmove > 0 || ent->client->ps.groundEntityNum == ENTITYNUM_NONE)

@@ -1283,7 +1283,10 @@ void CG_DrawIconBackground(void)
 	int				prongLeftX,prongRightX;
 	qhandle_t		background;
 
-	if ((cg.zoomMode != 0 && (cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR)) || !( cg_drawHUD.integer ))
+	//Corto
+	//Ironsights
+	//Modified this check so when the player is zooming through the ironsights the icon background remains on screen
+	if ((cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR) || cg.zoomMode == 1 || cg.zoomMode == 3 || !( cg_drawHUD.integer ))
 	{
 		return;
 	}

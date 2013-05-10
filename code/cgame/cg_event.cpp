@@ -523,7 +523,9 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		break;
 
 	case EV_FIRE_WEAPON:
-		if ((cent->gent->client->usercmd.forwardmove > 64 && cent->gent->client->usercmd.rightmove == 0 && cg.zoomMode == 0 && cent->gent->client->ps.stats[STAT_STAMINA] > 0) || cent->gent->client->usercmd.upmove > 0)
+		//Corto
+		//If playing is sprinting it can't shoot or jumping (which is not the same as "in air"), just sprint
+		if ((cent->gent->client->usercmd.forwardmove > 64 && cg.zoomMode == 0) || cent->gent->client->usercmd.upmove > 0)
 		{
 			break;
 		}
@@ -532,7 +534,9 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		break;
 
 	case EV_ALT_FIRE:
-		if ((cent->gent->client->usercmd.forwardmove > 64 && cent->gent->client->usercmd.rightmove == 0 && cg.zoomMode == 0 && cent->gent->client->ps.stats[STAT_STAMINA] > 0 ) || cent->gent->client->usercmd.upmove > 0)
+		//Corto
+		//If playing is sprinting it can't shoot or jumping (which is not the same as "in air"), just sprint
+		if ((cent->gent->client->usercmd.forwardmove > 64 && cg.zoomMode == 0) || cent->gent->client->usercmd.upmove > 0)
 		{
 			break;
 		}
