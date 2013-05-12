@@ -977,33 +977,11 @@ void CG_AddViewWeapon( playerState_t *ps )
 		actualFOV = (cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
 	}
 
-	/*if ( actualFOV > 80 ) 
-	{
-		fovOffset = -0.1 * ( actualFOV - 80 );
-	} 
-	
-	if ( actualFOV < 80 ) 
-	{
-		fovOffset = 0.1 * ( 80 - actualFOV );
-	} 
-	
-	if ( actualFOV == 80 )
-	{
-		fovOffset = 0;
-	}*/
-
+	//Corto
+	//Enough with this "Let's add offsets" bullshit. The gun stays where it should be
 	fovOffset = 0;
+	leanOffset = 0;
 
-	if ( cg.snap->ps.leanofs != 0 )
-	{
-		//add leaning offset
-		leanOffset = cg.snap->ps.leanofs * 0.25f;
-		fovOffset += fabs((double)cg.snap->ps.leanofs) * -0.1f;
-	}
-	else
-	{
-		leanOffset = 0;
-	}
 
 	CG_RegisterWeapon( ps->weapon );
 	weapon = &cg_weapons[ps->weapon];

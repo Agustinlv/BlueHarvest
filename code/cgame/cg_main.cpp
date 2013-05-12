@@ -1315,6 +1315,8 @@ static void CG_RegisterGraphics( void ) {
 	cgs.media.HUDArmor2= cgi_R_RegisterShaderNoMip( "gfx/hud/armor2" );
 	cgs.media.HUDHealth= cgi_R_RegisterShaderNoMip( "gfx/hud/health" );
 	cgs.media.HUDHealthTic= cgi_R_RegisterShaderNoMip( "gfx/hud/health_tic" );
+	cgs.media.HUDArmorDamage= cgi_R_RegisterShaderNoMip( "gfx/hud/armordamage" );
+	cgs.media.HUDHealthDamage= cgi_R_RegisterShaderNoMip( "gfx/hud/healthdamage" );
 //	cgs.media.HUDArmorTic= cgi_R_RegisterShaderNoMip( "gfx/hud/armor_tic" );
 
 	cgs.media.HUDRightFrame= cgi_R_RegisterShaderNoMip( "gfx/hud/hudrightframe" );

@@ -198,6 +198,8 @@ typedef struct {
 	qhandle_t	HUDHealthTic;
 	qhandle_t	HUDArmorTic;
 	qhandle_t	HUDInnerLeft;
+	qhandle_t	HUDArmorDamage;
+	qhandle_t	HUDHealthDamage;
 
 	qhandle_t	HUDSaberStyleFast;
 	qhandle_t	HUDSaberStyleMed;

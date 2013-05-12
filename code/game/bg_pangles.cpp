@@ -26,8 +26,10 @@ This file is part of Jedi Knight 2.
 #include "q_shared.h"
 #include "g_shared.h"
 #include "bg_local.h"
+#include "b_local.h"
 #include "anims.h"
 #include "wp_saber.h"
+#include "..\cgame\cg_headers.h"
 
 extern qboolean PM_InAnimForSaberMove( int anim, int saberMove );
 extern qboolean PM_InForceGetUp( playerState_t *ps );
@@ -493,48 +495,26 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 		}
 	}
 
-	if ( (!cg.renderingThirdPerson||cg.zoomMode) && (cmd->buttons & BUTTON_USE) && cmd->rightmove != 0 && !cmd->forwardmove && cmd->upmove <= 0 )
+	if ( (!cg.renderingThirdPerson||cg.zoomMode) )
 	{//Only lean if holding use button, strafing and not moving forward or back and not jumping
 		if ( gent )
 		{
 			int leanofs = 0;
 			vec3_t	viewangles;
 
-			if ( cmd->rightmove > 0 )
-			{
-				/*
-				if( pm->ps->legsAnim != LEGS_LEAN_RIGHT1)
-				{
-					PM_SetAnim(pm, SETANIM_LEGS, LEGS_LEAN_RIGHT1, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD);
-				}
-				pm->ps->legsAnimTimer = 500;//Force it to hold the anim for at least half a sec
-				*/
-
-				if ( ps->leanofs <= 28 )
-				{
+			if ( cmd->buttons & BUTTON_LEANRIGHT ) {
+				if ( ps->leanofs <= 28 ) {
 					leanofs = ps->leanofs + 4;
-				}
-				else
-				{
+				} else {
 					leanofs = 32;
 				}
 			}
-			else
-			{
-				/*
-				if ( pm->ps->legsAnim != LEGS_LEAN_LEFT1 )
-				{
-					PM_SetAnim(pm, SETANIM_LEGS, LEGS_LEAN_LEFT1, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD);
-				}
-				pm->ps->legsAnimTimer = 500;//Force it to hold the anim for at least half a sec
-				*/
-
-				if ( ps->leanofs >= -28 )
-				{
+			
+			if (  cmd->buttons & BUTTON_LEANLEFT ) {
+				
+				if ( ps->leanofs >= -28 ) {
 					leanofs = ps->leanofs - 4;
-				}
-				else
-				{
+				} else {
 					leanofs = -32;
 				}
 			}
@@ -555,7 +535,7 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 
 			ps->leanofs = floor((float)leanofs * trace.fraction);
 
-			ps->leanStopDebounceTime = 20;
+			ps->leanStopDebounceTime = 100;
 		}
 	}
 	else
@@ -592,8 +572,8 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 	if ( ps->leanStopDebounceTime )
 	{
 		ps->leanStopDebounceTime -= 1;
-		cmd->rightmove = 0;
-		cmd->buttons &= ~BUTTON_USE;
+		cmd->buttons &= ~BUTTON_LEANLEFT;
+		cmd->buttons &= ~BUTTON_LEANRIGHT;
 	}
 }
 

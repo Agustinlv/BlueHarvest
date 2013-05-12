@@ -104,7 +104,7 @@ vec4_t colorTable[CT_MAX] =
 {   .199f, .71f,   .92f, 1},	// CT_LTBLUE3
 {   .5f,   .05f,    .4f, 1},	// CT_DKBLUE3
 
-{   0.0f,   .613f,  .097f, 1},	// CT_HUD_GREEN
+{   0.0f,   .65f,  .75f, 1},	// CT_HUD_GREEN
 {   0.835f, .015f,  .015f, 1},	// CT_HUD_RED
 {	.567f,	.685f,	1.0f,	.75f},	// CT_ICON_BLUE
 {	.515f,	.406f,	.507f,	1},	// CT_NO_AMMO_RED

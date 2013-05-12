@@ -361,7 +361,7 @@ static void PM_Accelerate( vec3_t wishdir, float wishspeed, float accel )
 	//Corto
 	//I don't know what these guys where thinking, but using the dotproduct between the velocity vector and the direction vector
 	//to calculate the current speed is WRONG. The solution to this problem was here and only all the fucking time
-	currentspeed = VectorLength (pm->ps->velocity);
+	currentspeed = sqrt((float) (pm->ps->velocity[0]*pm->ps->velocity[0] + pm->ps->velocity[1]*pm->ps->velocity[1]));
 
 	addspeed = wishspeed - currentspeed;
 	

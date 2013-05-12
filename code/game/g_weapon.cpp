@@ -45,7 +45,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 
 // Bryar Pistol
 //--------
-#define BRYAR_PISTOL_VEL			3500
+#define BRYAR_PISTOL_VEL			4500
 #define BRYAR_PISTOL_DAMAGE			14
 #define BRYAR_CHARGE_UNIT			200.0f	// bryar charging gives us one more unit every 200ms--if you change this, you'll have to do the same in bg_pmove
 
@@ -54,7 +54,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 #define BLASTER_MAIN_SPREAD			1.5f
 #define BLASTER_ALT_SPREAD			0.1f
 #define BLASTER_NPC_SPREAD			0.2f
-#define BLASTER_VELOCITY			3500
+#define BLASTER_VELOCITY			4500
 #define BLASTER_NPC_VEL_CUT			0.5f
 #define BLASTER_NPC_HARD_VEL_CUT	0.7f
 #define BLASTER_DAMAGE				20
@@ -79,7 +79,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 // Wookie Bowcaster
 //----------
 #define	BOWCASTER_DAMAGE			45
-#define	BOWCASTER_VELOCITY			2300
+#define	BOWCASTER_VELOCITY			3000
 #define	BOWCASTER_NPC_DAMAGE_EASY	15
 #define	BOWCASTER_NPC_DAMAGE_NORMAL	30
 #define	BOWCASTER_NPC_DAMAGE_HARD	45
@@ -87,7 +87,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 #define BOWCASTER_SPLASH_RADIUS		0
 #define BOWCASTER_SIZE				2
 
-#define BOWCASTER_ALT_SPREAD		1.0f
+#define BOWCASTER_ALT_SPREAD		0.5f
 #define BOWCASTER_VEL_RANGE			0.3f
 #define BOWCASTER_CHARGE_UNIT		200.0f	// bowcaster charging gives us one more unit every 200ms--if you change this, you'll have to do the same in bg_pmove
 
@@ -96,7 +96,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 #define REPEATER_SPREAD				1.0f
 #define REPEATER_NPC_SPREAD			0.7f
 #define	REPEATER_DAMAGE				8
-#define	REPEATER_VELOCITY			1600
+#define	REPEATER_VELOCITY			3500
 #define	REPEATER_NPC_DAMAGE_EASY	2
 #define	REPEATER_NPC_DAMAGE_NORMAL	4
 #define	REPEATER_NPC_DAMAGE_HARD	8
@@ -113,7 +113,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 // DEMP2
 //----------
 #define	DEMP2_DAMAGE				15
-#define	DEMP2_VELOCITY				1800
+#define	DEMP2_VELOCITY				3000
 #define	DEMP2_NPC_DAMAGE_EASY		6
 #define	DEMP2_NPC_DAMAGE_NORMAL		12
 #define	DEMP2_NPC_DAMAGE_HARD		18
@@ -145,7 +145,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 
 // Personal Rocket Launcher
 //---------
-#define	ROCKET_VELOCITY				3000
+#define	ROCKET_VELOCITY				3500
 #define	ROCKET_DAMAGE				100
 #define	ROCKET_SPLASH_DAMAGE		100
 #define	ROCKET_SPLASH_RADIUS		160
@@ -4007,7 +4007,7 @@ static void CalculateSpreads (gentity_t *ent, float main_spread, float alternati
 		alt_spread = alternative_spread;
 		spread = main_spread;
 		//If player is moving while ducking (nobody can shoot right while ducking and moving, so accuracy goes to hell)
-		if ( ent->client->usercmd.forwardmove != 0 || ent->client->usercmd.rightmove != 0 )
+		if ( VectorLength(ent->client->ps.velocity) > 0 )
 		{
 			alt_spread = alternative_spread + 2.0f;
 			spread = main_spread + 2.0f;
@@ -4016,21 +4016,15 @@ static void CalculateSpreads (gentity_t *ent, float main_spread, float alternati
 	//If player is standing
 	if ( ent->client->usercmd.upmove == 0 && ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
 	{
-		//If player is standing still (just a little less than ducking still)
+		//If player is standing still
 		alt_spread = alternative_spread + 0.15f;
 		spread = main_spread + 0.15f;
-		//If player is walking (accuracy decreases just a bit)
-		if ( ent->client->usercmd.forwardmove != 0 || ent->client->usercmd.rightmove != 0 )
+		//If player is walking but not doing so while aiming well.
+		if ( VectorLength(ent->client->ps.velocity) > 100 )
 		{
 			alt_spread = alternative_spread + 0.25f;
 			spread = main_spread + 0.25f;
 		}
-		//If player is running (you shouldn't be running and shooting at the same time, but for now let's send accuracy to hell)
-		/*if ( abs(ent->client->usercmd.forwardmove) > 64 || abs(ent->client->usercmd.rightmove) > 64)
-		{
-			alt_spread = alternative_spread + 2.0f;
-			spread = main_spread + 2.0f;
-		}*/
 	}
 	//If player is jumping or in the air (under any circumstances you can be on the air and hit something)
 	if ( ent->client->usercmd.upmove > 0 || ent->client->ps.groundEntityNum == ENTITYNUM_NONE)

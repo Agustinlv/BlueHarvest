@@ -8542,7 +8542,7 @@ void WP_InitForcePowers( gentity_t *ent )
 void ArmorRegenerate( gentity_t *self, int mod)
 {
 	//Let's not give shield regeneration to the NPCs, it defeats the purpose of this
-	if ( !self->client || self-> NPC)
+	if ( !self->client || self-> NPC || self->client->ps.stats[STAT_HEALTH] <= 0 )
 	{
 		return;
 	}

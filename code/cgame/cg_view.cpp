@@ -1456,13 +1456,15 @@ static void CG_DamageBlendBlob( void )
 	int			t;
 	int			maxTime;
 	refEntity_t		ent;
+	//vec4_t			color1;
 
 	if ( !cg.damageValue ) {
 		return;
 	}
 
-	maxTime = DAMAGE_TIME;
-	t = cg.time - cg.damageTime;
+	
+	maxTime = DAMAGE_TIME + (cg.snap->ps.stats[STAT_MAX_HEALTH] - cg.snap->ps.stats[STAT_HEALTH]);
+	t = ( cg.time - cg.damageTime );
 	if ( t <= 0 || t >= maxTime ) {
 		return;
 	}
@@ -1475,13 +1477,13 @@ static void CG_DamageBlendBlob( void )
 	VectorMA( ent.origin, cg.damageX * -8, cg.refdef.viewaxis[1], ent.origin );
 	VectorMA( ent.origin, cg.damageY * 8, cg.refdef.viewaxis[2], ent.origin );
 
-	ent.radius = cg.damageValue * 3 * ( 1.0 - ((float)t / maxTime) );
+	ent.radius = cg.damageValue * ( 1.0 - ((float)t / maxTime) );
 	ent.customShader = cgs.media.damageBlendBlobShader;
 	ent.shaderRGBA[0] = 180 * ( 1.0 - ((float)t / maxTime) );
 	ent.shaderRGBA[1] = 50 * ( 1.0 - ((float)t / maxTime) );
 	ent.shaderRGBA[2] = 50 * ( 1.0 - ((float)t / maxTime) );
 	ent.shaderRGBA[3] = 255;
-
+	
 	cgi_R_AddRefEntityToScene( &ent );
 }
 

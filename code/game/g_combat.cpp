@@ -4894,6 +4894,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			return;
 		}
 	}
+	
 	if ( mod == MOD_SABER )
 	{//sabers do less damage to mark1's and atst's
 		if ( targ->client && (targ->client->NPC_class == CLASS_ATST || targ->client->NPC_class == CLASS_MARK1) )
@@ -5013,6 +5014,9 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			{
 				// DEMP2 does way more damage to these guys.
 				damage *= 5;
+			//If not a droid, the the EMP doesn't do any damage.
+			} else {
+				return;
 			}
 		}
 		else if ( targ->s.weapon == WP_TURRET )
@@ -5020,6 +5024,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			damage *= 6;// more damage to turret things
 		}
 	}
+	
 	knockback = damage;
 
 	//Attempt to apply extra knockback

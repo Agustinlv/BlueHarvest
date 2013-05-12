@@ -55,7 +55,7 @@ kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
 kbutton_t	in_strafe, in_speed;
 kbutton_t	in_up, in_down;
 
-kbutton_t	in_buttons[8];
+kbutton_t	in_buttons[11];
 
 
 qboolean	in_mlooking;
@@ -235,6 +235,10 @@ void IN_Button6Down(void) {IN_KeyDown(&in_buttons[6]);}
 void IN_Button6Up(void) {IN_KeyUp(&in_buttons[6]);}
 void IN_Button7Down(void) {IN_KeyDown(&in_buttons[7]);}
 void IN_Button7Up(void) {IN_KeyUp(&in_buttons[7]);}
+void IN_Button8Down(void) {IN_KeyDown(&in_buttons[8]);}
+void IN_Button8Up(void) {IN_KeyUp(&in_buttons[8]);}
+void IN_Button9Down(void) {IN_KeyDown(&in_buttons[9]);}
+void IN_Button9Up(void) {IN_KeyUp(&in_buttons[9]);}
 
 void IN_ButtonDown (void) {
 	IN_KeyDown(&in_buttons[1]);}
@@ -302,6 +306,7 @@ void CL_KeyMove( usercmd_t *cmd ) {
 	// the walking flag is to keep animations consistant
 	// even during acceleration and develeration
 	//
+
 	if ( in_speed.active ^ cl_run->integer ) {
 		movespeed = 127;
 		cmd->buttons &= ~BUTTON_WALKING;
@@ -313,6 +318,7 @@ void CL_KeyMove( usercmd_t *cmd ) {
 	forward = 0;
 	side = 0;
 	up = 0;
+
 	if ( in_strafe.active ) {
 		side += movespeed * CL_KeyState (&in_right);
 		side -= movespeed * CL_KeyState (&in_left);
@@ -320,7 +326,6 @@ void CL_KeyMove( usercmd_t *cmd ) {
 
 	side += movespeed * CL_KeyState (&in_moveright);
 	side -= movespeed * CL_KeyState (&in_moveleft);
-
 
 	up += movespeed * CL_KeyState (&in_up);
 	up -= movespeed * CL_KeyState (&in_down);
@@ -491,7 +496,7 @@ void CL_CmdButtons( usercmd_t *cmd ) {
 	// send a button bit even if the key was pressed and released in
 	// less than a frame
 	//	
-	for (i = 0 ; i < 8 ; i++) {
+	for (i = 0 ; i < 12 ; i++) {
 		if ( in_buttons[i].active || in_buttons[i].wasPressed ) {
 			cmd->buttons |= 1 << i;
 		}
@@ -845,6 +850,11 @@ void CL_InitInput( void ) {
 	Cmd_AddCommand ("-force_grip", IN_Button6Up);
 	Cmd_AddCommand ("+altattack", IN_Button7Down);//altattack
 	Cmd_AddCommand ("-altattack", IN_Button7Up);
+	Cmd_AddCommand ("+leanleft", IN_Button8Down);//lean left
+	Cmd_AddCommand ("-leanleft", IN_Button8Up);
+	Cmd_AddCommand ("+leanright", IN_Button9Down);//lean right
+	Cmd_AddCommand ("-leanright", IN_Button9Up);
+
 	//generic button commands
 	Cmd_AddCommand ("+button0", IN_Button0Down);//attack
 	Cmd_AddCommand ("-button0", IN_Button0Up);
@@ -862,6 +872,10 @@ void CL_InitInput( void ) {
 	Cmd_AddCommand ("-button6", IN_Button6Up);
 	Cmd_AddCommand ("+button7", IN_Button7Down);//altattack
 	Cmd_AddCommand ("-button7", IN_Button7Up);
+	Cmd_AddCommand ("+button8", IN_Button8Down);//lean left
+	Cmd_AddCommand ("-button8", IN_Button8Up);
+	Cmd_AddCommand ("+button9", IN_Button9Down);//lean right
+	Cmd_AddCommand ("-button9", IN_Button9Up);
 	//end buttons
 	Cmd_AddCommand ("+mlook", IN_MLookDown);
 	Cmd_AddCommand ("-mlook", IN_MLookUp);

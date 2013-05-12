@@ -33,6 +33,8 @@ void CG_PrevInventory_f( void );
 void CG_NextForcePower_f( void );
 void CG_PrevForcePower_f( void );
 void CG_LoadHud_f( void );
+void CG_LeanLeft ( void );
+void CG_LeanRight ( void );
 
 
 /*

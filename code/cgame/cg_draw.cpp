@@ -567,45 +567,18 @@ static void CG_DrawArmor(int x,int y)
 	calcColor[2] *= armorPercent;
 	cgi_R_SetColor( calcColor);					
 	CG_DrawPic(   x, y, 80, 80, cgs.media.HUDArmor2 );			//	Inner Armor circular
-/*
-	if (ps->stats[STAT_ARMOR])	// Is there armor? Draw the HUD Armor TIC
-	{
-		// Make tic flash if inner armor is at 50% (25% of full armor)
-		if (armorPercent<.5)		// Do whatever the flash timer says
-		{
-			if (cg.HUDTickFlashTime < cg.time)			// Flip at the same time
-			{
-				cg.HUDTickFlashTime = cg.time + 100;
-				if (cg.HUDArmorFlag)
-				{
-					cg.HUDArmorFlag = qfalse;
-				}
-				else
-				{
-					cg.HUDArmorFlag = qtrue;
-				}
-			}
-		}
-		else
-		{
-			cg.HUDArmorFlag=qtrue;
-		}
-	}
-	else						// No armor? Don't show it.
-	{
-		cg.HUDArmorFlag=qfalse;
-	}
 
-	if (cg.HUDArmorFlag)
-	{
-		cgi_R_SetColor( colorTable[CT_HUD_GREEN] );					
-		CG_DrawPic(   x, y, 80, 80, cgs.media.HUDArmorTic );		
-	}
-*/
 	cgi_R_SetColor( colorTable[CT_HUD_GREEN] );	
 	CG_DrawNumField (x + 16 + 14, y + 40 + 14, 3, ps->stats[STAT_ARMOR], 6, 12, 
 		NUM_FONT_SMALL,qfalse);
 
+	calcColor[0] = sin( cg.time * 0.01f ) * 0.075f + 0.2f;
+	calcColor[1] = 0.65; //sin( cg.time * 0.01f ) * 0.075f + 0.2f;
+	calcColor[2] = 0.95f;
+	calcColor[3] = 1.0f - (float) ps->stats[STAT_ARMOR]/100;
+
+	cgi_R_SetColor( calcColor);					
+	CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDArmorDamage);
 }
 
 //-----------------------------------------------------
