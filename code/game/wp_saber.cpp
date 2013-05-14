@@ -5593,10 +5593,10 @@ void ForceThrow( gentity_t *self, qboolean pull )
 	{
 		return;
 	}
-	if ( self->client->ps.leanofs )
+	/*if ( self->client->ps.leanofs )
 	{//can't force-throw while leaning
 		return;
-	}
+	}*/
 	if ( self->client->ps.forcePowerDebounce[FP_PUSH] > level.time )//self->client->ps.powerups[PW_FORCE_PUSH] > level.time )
 	{//already pushing- now you can't haul someone across the room, sorry
 		return;
@@ -6868,10 +6868,11 @@ void ForceGrip( gentity_t *self )
 	{//can't force grip when zoomed in or in cinematic
 		return;
 	}
-	if ( self->client->ps.leanofs )
+	//Corto
+	/*if ( self->client->ps.leanofs )
 	{//can't force-grip while leaning
 		return;
-	}
+	}*/
 
 	if ( self->client->ps.forceGripEntityNum <= ENTITYNUM_WORLD )
 	{//already gripping
@@ -7080,10 +7081,11 @@ void ForceLightning( gentity_t *self )
 	{//can't force lightning when zoomed in or in cinematic
 		return;
 	}
-	if ( self->client->ps.leanofs )
+	//Corto
+	/*if ( self->client->ps.leanofs )
 	{//can't force-lightning while leaning
 		return;
-	}
+	}*/
 	if ( self->client->ps.forcePower < 25 || !WP_ForcePowerUsable( self, FP_LIGHTNING, 0 ) )
 	{
 		return;
@@ -8554,7 +8556,7 @@ void ArmorRegenerate( gentity_t *self, int mod)
 		{
 			self->client->ps.stats[STAT_ARMOR] += 1;
 			//The more damaged your shields are the slower they are going to start regenerating
-			self->client->ps.rechargeTime = level.time + (150 - self->client->ps.stats[STAT_ARMOR]);
+			self->client->ps.rechargeTime = level.time + (200 - self->client->ps.stats[STAT_ARMOR]);
 			if ( self->client->ps.stats[STAT_ARMOR] > self->client->ps.stats[STAT_MAX_HEALTH] )
 			{
 				self->client->ps.stats[STAT_ARMOR] = self->client->ps.stats[STAT_MAX_HEALTH];

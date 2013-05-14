@@ -199,7 +199,10 @@ typedef struct {
 	qhandle_t	HUDArmorTic;
 	qhandle_t	HUDInnerLeft;
 	qhandle_t	HUDArmorDamage;
-	qhandle_t	HUDHealthDamage;
+	qhandle_t	HUDHealthDamage10;
+	qhandle_t	HUDHealthDamage25;
+	qhandle_t	HUDHealthDamage50;
+	qhandle_t	HUDHealthDamage75;
 
 	qhandle_t	HUDSaberStyleFast;
 	qhandle_t	HUDSaberStyleMed;

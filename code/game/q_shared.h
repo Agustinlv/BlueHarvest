@@ -1322,7 +1322,7 @@ typedef struct playerState_s {
 	int			weaponChargeTime;
 	int			rechargeTime;		// for the phaser
 	int			gravity;
-	int			leanofs;			
+	int			leanofs;			//Corto - Changed this to float to see if I can make smoother transitions.
 	int			friction;
 	int			speed;
 	int			delta_angles[3];	// add to command angles to get view direction
@@ -1397,7 +1397,7 @@ typedef struct playerState_s {
 	short		saberBounceMove;
 	short		saberBlocking;
 	short		saberBlocked;
-	short		leanStopDebounceTime;
+	int			leanStopDebounceTime; //Corto: Changed this from short to int because it was overflowing with level time
 
 	float		saberLengthOld;
 	int			saberEntityNum;

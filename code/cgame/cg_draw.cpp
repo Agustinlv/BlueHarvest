@@ -519,9 +519,7 @@ static void CG_DrawHealth(int x,int y)
 	}
 
 	cgi_R_SetColor( colorTable[CT_HUD_RED] );	
-	CG_DrawNumField (x + 16, y + 40, 3, ps->stats[STAT_HEALTH], 6, 12, 
-		NUM_FONT_SMALL,qtrue);
-
+	CG_DrawNumField (x + 16, y + 40, 3, ps->stats[STAT_HEALTH], 6, 12, NUM_FONT_SMALL,qtrue);
 }
 
 /*
@@ -571,10 +569,91 @@ static void CG_DrawArmor(int x,int y)
 	cgi_R_SetColor( colorTable[CT_HUD_GREEN] );	
 	CG_DrawNumField (x + 16 + 14, y + 40 + 14, 3, ps->stats[STAT_ARMOR], 6, 12, 
 		NUM_FONT_SMALL,qfalse);
+}
+/*
+Corto
+==================================
+CG_DrawHealth Damage Visual Effect
+==================================
+*/
+static void CG_DrawHealthVisual(void)
+{
+	vec4_t calcColor;
+	playerState_t	*ps;
+	float	alphaScale = 0.25f;
+	float	threeQuartersHealth, halfHealth, QuarterHealth;
 
+	ps = &cg.snap->ps;
+
+	threeQuartersHealth = ps->stats[STAT_MAX_HEALTH]*0.75f;
+	halfHealth = ps->stats[STAT_MAX_HEALTH]*0.5f;
+	QuarterHealth = ps->stats[STAT_MAX_HEALTH]*0.25f;
+
+	//Corto
+	//Screen health damage feedback
+	calcColor[0] = 0.9f;
+	calcColor[1] = sin( cg.time * 0.002f ) * 0.04f + 0.1f;
+	calcColor[2] = calcColor[1];
+	
+	//Below full health
+	if ( ps->stats[STAT_HEALTH] < ps->stats[STAT_MAX_HEALTH]) {
+		calcColor[3] = (1.0f - (float) (ps->stats[STAT_HEALTH] - threeQuartersHealth ) / QuarterHealth)*alphaScale;
+		cgi_R_SetColor( calcColor);					
+		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage75);
+	}
+	//Below 3/4
+	if ( ps->stats[STAT_HEALTH] < threeQuartersHealth) {
+		calcColor[3] = alphaScale;
+		cgi_R_SetColor( calcColor);					
+		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage75);
+		calcColor[3] = (1.0f - (float) (ps->stats[STAT_HEALTH] - halfHealth ) / QuarterHealth)*alphaScale;
+		cgi_R_SetColor( calcColor);					
+		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage50);
+	}
+	//Below 1/2 of health
+	if ( ps->stats[STAT_HEALTH] < halfHealth) {
+		calcColor[3] = alphaScale;
+		cgi_R_SetColor( calcColor);
+		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage75);
+		cgi_R_SetColor( calcColor);					
+		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage50);
+		calcColor[3] = (1.0f - (float) (ps->stats[STAT_HEALTH] - QuarterHealth ) / QuarterHealth)*alphaScale;
+		cgi_R_SetColor( calcColor);					
+		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage25);
+	}
+	//Below 1/4 of health
+	if ( ps->stats[STAT_HEALTH] < QuarterHealth) {
+		calcColor[3] = alphaScale;
+		cgi_R_SetColor( calcColor);
+		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage75);
+		cgi_R_SetColor( calcColor);					
+		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage50);
+		cgi_R_SetColor( calcColor);					
+		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage25);
+		calcColor[3] = (1.0f - (float) ps->stats[STAT_HEALTH] / QuarterHealth)*alphaScale;
+		cgi_R_SetColor( calcColor);					
+		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage10);
+	}
+}
+
+/*
+Corto
+=================================
+CG_DrawArmor Damage Visual Effect
+=================================
+*/
+static void CG_DrawArmorVisual (void)
+{
+	vec4_t calcColor;
+	playerState_t	*ps;
+
+	ps = &cg.snap->ps;
+
+	//Corto
+	//Screen armor damage feedback
 	calcColor[0] = sin( cg.time * 0.01f ) * 0.075f + 0.2f;
-	calcColor[1] = 0.65; //sin( cg.time * 0.01f ) * 0.075f + 0.2f;
-	calcColor[2] = 0.95f;
+	calcColor[1] = 0.75;
+	calcColor[2] = 1.00f;
 	calcColor[3] = 1.0f - (float) ps->stats[STAT_ARMOR]/100;
 
 	cgi_R_SetColor( calcColor);					
@@ -727,8 +806,8 @@ static void CG_DrawHUD( centity_t *cent )
 		}
 
 		CG_DrawHUDLeftFrame1(x,y);
-		CG_DrawArmor(x,y);
 		CG_DrawHealth(x,y);
+		CG_DrawArmor(x,y);
 		CG_DrawHUDLeftFrame2(x,y);
 	}
 
@@ -1299,7 +1378,7 @@ static void CG_DrawCrosshair( vec3_t worldPoint )
 	//Corto
 	//Ironsights
 	//I modified this check so when zooming though the ironsights the crosshair remains on screen
-	if ( (cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR) || cg.zoomMode == 1 || !cg_drawCrosshair.integer )
+	if ( (cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR) || cg.zoomMode == 1 || !cg_drawCrosshair.integer || cg.snap->ps.weapon == WP_SABER )
 	{
 		return;
 	}
@@ -1308,9 +1387,7 @@ static void CG_DrawCrosshair( vec3_t worldPoint )
 	if ( g_crosshairEntNum >= ENTITYNUM_WORLD )
 	{
 		ecolor[0] = ecolor[1] = ecolor[2] = 1.0f;
-	}
-	else if ( cg_forceCrosshair && cg_crosshairForceHint.integer )
-	{
+	} else if ( cg_forceCrosshair && cg_crosshairForceHint.integer ) {
 		ecolor[0] = 0.2f;
 		ecolor[1] = 0.5f;
 		ecolor[2] = 1.0f;
@@ -2292,6 +2369,8 @@ static void CG_Draw2D( void )
 	// don't draw any status if dead
 	if ( cg.snap->ps.stats[STAT_HEALTH] > 0 ) 
 	{
+		CG_DrawHealthVisual();
+		CG_DrawArmorVisual();
 		if ( !(cent->gent && cent->gent->s.eFlags & (EF_LOCKED_TO_WEAPON |EF_IN_ATST)))
 		{
 			CG_DrawIconBackground();

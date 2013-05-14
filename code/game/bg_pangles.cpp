@@ -402,6 +402,8 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 	vec3_t		start, end, tmins, tmaxs, right;
 	trace_t		trace;
 	qboolean	lockedYaw = qfalse;
+	int			transitionTime = 1;
+	int			leanofsIncrements = 4;
 
 	if ( ps->pm_type == PM_INTERMISSION ) 
 	{
@@ -495,25 +497,32 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 		}
 	}
 
-	if ( (!cg.renderingThirdPerson||cg.zoomMode) )
-	{//Only lean if holding use button, strafing and not moving forward or back and not jumping
-		if ( gent )
-		{
-			int leanofs = 0;
+	//Corto
+	//Added new keys for lean left and right
+	if ( (!cg.renderingThirdPerson||cg.zoomMode) && ( cmd->buttons & BUTTON_LEANRIGHT || cmd->buttons & BUTTON_LEANLEFT)) {
+		if ( gent ) {
+			int leanofs = ps->leanofs;
 			vec3_t	viewangles;
+			
+			ps->leanStopDebounceTime = 0;
 
 			if ( cmd->buttons & BUTTON_LEANRIGHT ) {
-				if ( ps->leanofs <= 28 ) {
-					leanofs = ps->leanofs + 4;
+				if (ps->leanofs < 32) {
+					while (ps->leanStopDebounceTime < level.time ) {
+						leanofs = ps->leanofs + leanofsIncrements;
+						ps->leanStopDebounceTime = level.time + transitionTime;
+						}
 				} else {
 					leanofs = 32;
 				}
 			}
-			
-			if (  cmd->buttons & BUTTON_LEANLEFT ) {
-				
-				if ( ps->leanofs >= -28 ) {
-					leanofs = ps->leanofs - 4;
+		
+			if ( cmd->buttons & BUTTON_LEANLEFT ) {
+				if (ps->leanofs > -32) {
+					while (ps->leanStopDebounceTime < level.time ) {
+						leanofs = ps->leanofs - leanofsIncrements;
+						ps->leanStopDebounceTime = level.time + transitionTime;
+						}
 				} else {
 					leanofs = -32;
 				}
@@ -526,54 +535,38 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 			AngleVectors( ps->viewangles, NULL, right, NULL );
 			VectorNormalize( right );
 			right[2] = (leanofs<0)?0.25:-0.25;
-			VectorMA( start, leanofs, right, end );
+			VectorMA( start, (float)leanofs, right, end );
 			VectorSet( tmins, -8, -8, -4 );
 			VectorSet( tmaxs, 8, 8, 4 );
 			//if we don't trace EVERY frame, can TURN while leaning and
 			//end up leaning into solid architecture (sigh)
 			gi.trace( &trace, start, tmins, tmaxs, end, gent->s.number, MASK_PLAYERSOLID, G2_NOCOLLIDE, 0 );
 
-			ps->leanofs = floor((float)leanofs * trace.fraction);
-
-			ps->leanStopDebounceTime = 100;
+			ps->leanofs = floor((float)(leanofs * trace.fraction));
 		}
-	}
-	else
-	{
-		if ( gent && (cmd->forwardmove || cmd->upmove > 0) )
-		{
-			if( ( pm->ps->legsAnim == LEGS_LEAN_RIGHT1) ||
-				( pm->ps->legsAnim == LEGS_LEAN_LEFT1) )
-			{
+	} else {
+		
+		ps->leanStopDebounceTime = 0;
+
+		if ( gent && (cmd->forwardmove || cmd->upmove > 0) ) {
+			if( ( pm->ps->legsAnim == LEGS_LEAN_RIGHT1) || ( pm->ps->legsAnim == LEGS_LEAN_LEFT1) ) {
 				pm->ps->legsAnimTimer = 0;//Force it to stop the anim
 			}
 		}
 
-		if ( ps->leanofs > 0 )
-		{
-			//FIXME: play lean anim backwards?
-			ps->leanofs-=4;
-			if ( ps->leanofs < 0 )
-			{
-				ps->leanofs = 0;
+		if ( ps->leanofs > 0 ) {
+			while (ps->leanStopDebounceTime < level.time ) {
+				ps->leanofs -= leanofsIncrements;
+				ps->leanStopDebounceTime = level.time + transitionTime;
+			}
+		} 
+		
+		if ( ps->leanofs < 0 ) {
+			while (ps->leanStopDebounceTime < level.time ) {
+				ps->leanofs += leanofsIncrements;
+				ps->leanStopDebounceTime = level.time + transitionTime;
 			}
 		}
-		else if ( ps->leanofs < 0 )
-		{
-			//FIXME: play lean anim backwards?
-			ps->leanofs+=4;
-			if ( ps->leanofs > 0 )
-			{
-				ps->leanofs = 0;
-			}
-		}
-	}
-
-	if ( ps->leanStopDebounceTime )
-	{
-		ps->leanStopDebounceTime -= 1;
-		cmd->buttons &= ~BUTTON_LEANLEFT;
-		cmd->buttons &= ~BUTTON_LEANRIGHT;
 	}
 }
 

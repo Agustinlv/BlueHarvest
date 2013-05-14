@@ -71,6 +71,7 @@ extern qboolean PM_InDeathAnim ( void );
 extern qboolean PM_StandingAnim( int anim );
 extern int PM_SaberFlipOverAttackMove( void );
 extern int PM_SaberJumpAttackMove( void );
+extern void setCustomGunOffset (int weaponNumber);
 
 qboolean PM_InKnockDown( playerState_t *ps );
 qboolean PM_InKnockDownOnGround( playerState_t *ps );
@@ -1931,7 +1932,12 @@ static void PM_WalkMove( void ) {
 	//WTF? I had to put this in here or otherwise I couldn't be able to stop from sprinting and strafing at the same time.
 	//If there's a better way to do this, go ahead.
 	if (cg.zoomMode == 0 && pm->cmd.forwardmove > 64) {
-			pm->cmd.rightmove = 0;
+			if ( pm->cmd.rightmove > 64 ) {
+				pm->cmd.rightmove = 64;
+			}
+			if ( pm->cmd.rightmove < -64 ) {
+				pm->cmd.rightmove = -64;
+			}
 	}
 	
 	fmove = pm->cmd.forwardmove;
@@ -2024,31 +2030,31 @@ static void PM_WalkMove( void ) {
 	{
 		if (cg.zoomMode == 0) {
 			if (abs(fmove) <= 64 && abs(smove) <= 64) {
-				wishspeed += 44;
+				wishspeed += 24;
 			}			
 			//If the player is running straight he cannot run sideways and the speed is more like a real sprint, not a fast jog
 			if ( fmove > 64 ) {
-				wishspeed += 130;
+				wishspeed += 50;
 			}
 			//This means is running sideways. If so, then I'll bring the speed down to a fast walk
 			if (abs(smove) > 64 && fmove >= -64) {
-				wishspeed -= 80;
+				wishspeed -= 100;
 			}
 			//Is trying to run backwards. No sir.
 			if (fmove < -64) {
-				wishspeed -= 17;
+				wishspeed -= 37;
 			}
 		//The player is on some zoom mode, so the speeds will be all the same regardless his trying to run or not
 		} else {
 			if (abs(fmove) > 64 || abs(smove) > 64) {
 				if (fmove < -64) {
-					wishspeed -= 87;
+					wishspeed -= 97;
 				}
 				else {
-					wishspeed -= 150;
+					wishspeed -= 160;
 				}
 			} else {
-				wishspeed -= 26;
+				wishspeed -= 36;
 			}
 		}
 	}
@@ -8666,37 +8672,38 @@ void PM_AdjustAttackStates( pmove_t *pm )
 			{
 				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomstart.wav" );
 				// not already zooming, so do it now
-				//if (pm->ps->weapon == WP_DISRUPTOR)
-				//{
+				if (pm->ps->weapon == WP_DISRUPTOR) {
 					cg.zoomMode = 2;
 					cg.zoomTime = cg.time;
 					cg.zoomLocked = qtrue;
-					if (pm->ps->weapon == WP_DISRUPTOR)
-					{
-						cg_zoomFov = 20.0f;
+					cg_zoomFov = 20.0f;
+				} else {
+					if ( cg.renderingThirdPerson ) {
+						cg_thirdPersonRange.value = 20 ;
+					} else {
+						cg.zoomMode = 2;
+						cg.zoomTime = cg.time;
+						cg.zoomLocked = qtrue;
+						cg_zoomFov = 65.0f;//(cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
+						cg_gun_z.value = 3;//Brings the weapon up closer to the eye level
+						cg_gun_y.value = 2;//Brings the weapon to the center of the screen
+						//cg_gun_x.value = -1;//Brings the weapon back closer to the eye level
 					}
-					else
-					{
-						cg_zoomFov = 60.0f;//(cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
-						cg_gun_z.value = 3;//Brings the weapon closer to the eye level
-						cg_gun_y.value = 2;
-					}
+				}
 			}
-		}
-		//Releasing the alt fire button releases the zoom.
-		else if ( !(pm->cmd.buttons & BUTTON_ALT_ATTACK ))
-		{
+		} else if ( !(pm->cmd.buttons & BUTTON_ALT_ATTACK )) { //Releasing the alt fire button releases the zoom.
 			// Not pressing zoom any more
-			if (cg.zoomMode == 2)
-			{
+			if (cg.renderingThirdPerson ) {
+				cg_thirdPersonRange.value = 40;
+			}
+			if (cg.zoomMode == 2) {
 				// were zooming in, so now lock the zoom
 				//cg.zoomLocked = qtrue;
 				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomend.wav" );
 				cg.zoomMode = 0;
 				cg.zoomTime = cg.time;
 				cg.zoomLocked = qfalse;
-				cg_gun_z.value = 0;
-				cg_gun_y.value = 0;
+				setCustomGunOffset ( pm->ps->weapon );
 			}
 		}
 

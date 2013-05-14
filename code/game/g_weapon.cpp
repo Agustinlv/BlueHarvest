@@ -3135,7 +3135,7 @@ void SubtractLeanOfs(const gentity_t *const ent, vec3_t point)
 			vec3_t	right;
 			//add leaning offset
 			AngleVectors( ent->client->ps.viewangles, NULL, right, NULL );
-			VectorMA( point, ent->client->ps.leanofs*-1, right, point );
+			VectorMA( point, (float)ent->client->ps.leanofs*-1, right, point );
 		}
 	}
 }
