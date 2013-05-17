@@ -1909,7 +1909,7 @@ Creates a turret that, when the player uses a panel, takes control of this turre
 extern gentity_t	*player;
 extern qboolean		G_ClearViewEntity( gentity_t *ent );
 extern void			G_SetViewEntity( gentity_t *self, gentity_t *viewEntity );
-extern gentity_t	*CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t *owner, qboolean altFire = qfalse );
+extern gentity_t	*CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t *owner );
 
 void panel_turret_shoot( gentity_t *self, vec3_t org, vec3_t dir)
 {

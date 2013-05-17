@@ -72,6 +72,7 @@ extern qboolean PM_StandingAnim( int anim );
 extern int PM_SaberFlipOverAttackMove( void );
 extern int PM_SaberJumpAttackMove( void );
 extern void setCustomGunOffset (int weaponNumber);
+extern void setZoomGunOffset (int weaponNumber);
 
 qboolean PM_InKnockDown( playerState_t *ps );
 qboolean PM_InKnockDownOnGround( playerState_t *ps );
@@ -361,7 +362,7 @@ static void PM_Accelerate( vec3_t wishdir, float wishspeed, float accel )
 	//currentspeed = DotProduct (pm->ps->velocity, wishdir); This is actually wrong. The current speed is the vector lenght of the velocity vector. Booo to you Raven!
 	//Corto
 	//I don't know what these guys where thinking, but using the dotproduct between the velocity vector and the direction vector
-	//to calculate the current speed is WRONG. The solution to this problem was here and only all the fucking time
+	//to calculate the current speed is WRONG. The solution to this problem was here and only here all the fucking time
 	currentspeed = sqrt((float) (pm->ps->velocity[0]*pm->ps->velocity[0] + pm->ps->velocity[1]*pm->ps->velocity[1]));
 
 	addspeed = wishspeed - currentspeed;
@@ -7578,10 +7579,7 @@ void PM_WeaponLightsaber(void)
 
 	pm->ps->weaponstate = WEAPON_FIRING;
 
-	if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
-		amount = weaponData[pm->ps->weapon].altEnergyPerShot;
-	else
-		amount = weaponData[pm->ps->weapon].energyPerShot;
+	amount = weaponData[pm->ps->weapon].energyPerShot;
 
 	if ( pm->gent && pm->gent->client && pm->gent->client->fireDelay > 0 )
 	{//FIXME: this is going to fire off one frame before you expect, actually
@@ -7592,7 +7590,9 @@ void PM_WeaponLightsaber(void)
 	}
 
 	addTime = pm->ps->weaponTime;
-	if ( pm->cmd.buttons & BUTTON_ALT_ATTACK ) 	{
+	
+
+if ( pm->cmd.buttons & BUTTON_ALT_ATTACK && (pm->ps->weapon == WP_DET_PACK || pm->ps->weapon == WP_TRIP_MINE) )	{
 		PM_AddEvent( EV_ALT_FIRE );
 		if ( !addTime )
 		{
@@ -7615,8 +7615,7 @@ void PM_WeaponLightsaber(void)
 				}
 			}
 		}
-	}
-	else {
+	} else {
 		PM_AddEvent( EV_FIRE_WEAPON );
 		if ( !addTime )
 		{
@@ -7641,7 +7640,7 @@ void PM_WeaponLightsaber(void)
 			}
 		}
 	}
-
+	
 	//If the phaser has been fired, delay the next recharge time
 	if(pm->gent && pm->gent->NPC != NULL )
 	{//NPCs have their own refire logic
@@ -7660,98 +7659,14 @@ static bool PM_DoChargedWeapons( void )
 
 	//FIXME: make jedi aware they're being aimed at with a charged-up weapon (strafe and be evasive?)
 	// If you want your weapon to be a charging weapon, just set this bit up
-	switch( pm->ps->weapon )
-	{
-	//------------------
-	case WP_BRYAR_PISTOL:
+	/*switch( pm->ps->weapon ) {
 
-		// alt-fire charges the weapon
-		if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
-		{
-			charging = qtrue;
-			altFire = qtrue;
-		}
-		break;
-
-	//------------------
-	case WP_DISRUPTOR:
-
-		// alt-fire charges the weapon...but due to zooming being controlled by the alt-button, the main button actually charges...but only when zoomed.
-		//	lovely, eh?
-		if ( !pm->ps->clientNum )
-		{
-			if ( cg.zoomMode == 2 )
-			{
-				if ( pm->cmd.buttons & BUTTON_ATTACK )
-				{
-					charging = qtrue;
-					altFire = qtrue; // believe it or not, it really is an alt-fire in this case!
-				}
-			}
-		}
-		else if ( pm->gent && pm->gent->NPC )
-		{
-			if ( (pm->gent->NPC->scriptFlags&SCF_ALT_FIRE) )
-			{
-				if ( pm->gent->fly_sound_debounce_time > level.time )
-				{
-					charging = qtrue;
-					altFire = qtrue;
-				}
-			}
-		}
-		break;
-		
-	//------------------
-	case WP_BOWCASTER:
-
-		// main-fire charges the weapon
-		if ( pm->cmd.buttons & BUTTON_ATTACK )
-		{
-			charging = qtrue;
-		}
-		break;
-	
-	//------------------
-	case WP_DEMP2:
-
-		// alt-fire charges the weapon
-		if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
-		{
-			charging = qtrue;
-			altFire = qtrue;
-		}
-		break;
-
-	//------------------
-	case WP_ROCKET_LAUNCHER:
-
-		// Not really a charge weapon, but we still want to delay fire until the button comes up so that we can
-		//	implement our alt-fire locking stuff
-		if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
-		{
-			charging = qtrue;
-			altFire = qtrue;
-		}
-		break;
-
-	//------------------
 	case WP_THERMAL:
-		//			FIXME: Really should have a wind-up anim for player 
-		//			as he holds down the fire button to throw, then play
-		//			the actual throw when he lets go...
-		if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
-		{
-			altFire = qtrue; // override default of not being an alt-fire
-			charging = qtrue;
-		}
-		else if ( pm->cmd.buttons & BUTTON_ATTACK )
-		{
+		if ( pm->cmd.buttons & BUTTON_ATTACK ) {
 			charging = qtrue;
 		}
 		break;
-
-	} // end switch
+	}*/ // end switch
 
 	// set up the appropriate weapon state based on the button that's down.  
 	//	Note that we ALWAYS return if charging is set ( meaning the buttons are still down )
@@ -7837,133 +7752,7 @@ static int PM_DoChargingAmmoUsage( int *amount )
 {
 	int count = 0;
 
-	if ( pm->ps->weapon == WP_BOWCASTER && !( pm->cmd.buttons & BUTTON_ALT_ATTACK ))
-	{
-		// this code is duplicated ( I know, I know ) in G_weapon.cpp for the bowcaster alt-fire
-		count = ( level.time - pm->ps->weaponChargeTime ) / BOWCASTER_CHARGE_UNIT;
-
-		if ( count < 1 )
-		{
-			count = 1;
-		}
-		else if ( count > 5 )
-		{
-			count = 5;
-		}
-
-		if ( !(count & 1 ))
-		{
-			// if we aren't odd, knock us down a level
-			count--;
-		}
-
-		// Only bother with these checks if we don't have infinite ammo
-		if ( pm->ps->ammo[ weaponData[pm->ps->weapon].ammoIndex ] != -1 )
-		{
-			int dif = pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex] - *amount * count;
-
-			// If we have enough ammo to do the full charged shot, we are ok
-			if ( dif < 0 ) 
-			{
-				// we are not ok, so hack our chargetime and ammo usage, note that DIF is going to be negative
-				count += floor(dif / (float)*amount);
-
-				if ( count < 1 )
-				{
-					count = 1;
-				}
-
-				// now get a real chargeTime so the duplicated code in g_weapon doesn't get freaked
-				pm->ps->weaponChargeTime = level.time - ( count * BOWCASTER_CHARGE_UNIT );
-			}
-		}	
-
-		// now that count is cool, get the real ammo usage
-		*amount *= count;
-	}
-	else if ( pm->ps->weapon == WP_BRYAR_PISTOL && pm->cmd.buttons & BUTTON_ALT_ATTACK )
-	{
-		// this code is duplicated ( I know, I know ) in G_weapon.cpp for the bryar alt-fire
-		count = ( level.time - pm->ps->weaponChargeTime ) / BRYAR_CHARGE_UNIT;
-
-		if ( count < 1 )
-		{
-			count = 1;
-		}
-		else if ( count > 5 )
-		{
-			count = 5;
-		}
-
-		// Only bother with these checks if we don't have infinite ammo
-		if ( pm->ps->ammo[ weaponData[pm->ps->weapon].ammoIndex ] != -1 )
-		{
-			int dif = pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex] - *amount * count;
-
-			// If we have enough ammo to do the full charged shot, we are ok
-			if ( dif < 0 ) 
-			{
-				// we are not ok, so hack our chargetime and ammo usage, note that DIF is going to be negative
-				count += floor(dif / (float)*amount);
-
-				if ( count < 1 )
-				{
-					count = 1;
-				}
-
-				// now get a real chargeTime so the duplicated code in g_weapon doesn't get freaked
-				pm->ps->weaponChargeTime = level.time - ( count * BRYAR_CHARGE_UNIT );
-			}
-		}	
-
-		// now that count is cool, get the real ammo usage
-		*amount *= count;
-	}
-	else if ( pm->ps->weapon == WP_DEMP2 && pm->cmd.buttons & BUTTON_ALT_ATTACK )
-	{
-		// this code is duplicated ( I know, I know ) in G_weapon.cpp for the demp2 alt-fire
-		count = ( level.time - pm->ps->weaponChargeTime ) / DEMP2_CHARGE_UNIT;
-
-		if ( count < 1 )
-		{
-			count = 1;
-		}
-		else if ( count > 3 )
-		{
-			count = 3;
-		}
-
-		// Only bother with these checks if we don't have infinite ammo
-		if ( pm->ps->ammo[ weaponData[pm->ps->weapon].ammoIndex ] != -1 )
-		{
-			int dif = pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex] - *amount * count;
-
-			// If we have enough ammo to do the full charged shot, we are ok
-			if ( dif < 0 ) 
-			{
-				// we are not ok, so hack our chargetime and ammo usage, note that DIF is going to be negative
-				count += floor(dif / (float)*amount);
-
-				if ( count < 1 )
-				{
-					count = 1;
-				}
-
-				// now get a real chargeTime so the duplicated code in g_weapon doesn't get freaked
-				pm->ps->weaponChargeTime = level.time - ( count * DEMP2_CHARGE_UNIT );
-			}
-		}	
-
-		// now that count is cool, get the real ammo usage
-		*amount *= count;
-
-		// this is an after-thought.  should probably re-write the function to do this naturally.
-		if ( *amount > pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex] )
-		{
-			*amount = pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex];
-		}
-	}
-	else if ( pm->ps->weapon == WP_DISRUPTOR && pm->cmd.buttons & BUTTON_ALT_ATTACK ) // BUTTON_ATTACK will have been mapped to BUTTON_ALT_ATTACK if we are zoomed
+	if ( pm->ps->weapon == WP_DISRUPTOR && pm->cmd.buttons & BUTTON_ALT_ATTACK ) // BUTTON_ATTACK will have been mapped to BUTTON_ALT_ATTACK if we are zoomed
 	{
 		// this code is duplicated ( I know, I know ) in G_weapon.cpp for the disruptor alt-fire
 		count = ( level.time - pm->ps->weaponChargeTime ) / DISRUPTOR_CHARGE_UNIT;
@@ -8184,7 +7973,7 @@ static void PM_Weapon( void )
 	if(!delayed_fire)
 	{
 		// check for fire
-		if ( !(pm->cmd.buttons & (BUTTON_ATTACK|BUTTON_ALT_ATTACK)) )
+		if ( !(pm->cmd.buttons & BUTTON_ATTACK) && !(pm->cmd.buttons & (BUTTON_ATTACK|BUTTON_ALT_ATTACK) && (pm->ps->weapon == WP_DET_PACK || pm->ps->weapon == WP_TRIP_MINE))) // && (pm->ps->weapon == WP_DET_PACK || pm->ps->weapon == WP_TRIP_MINE))) )
 		{
 			pm->ps->weaponTime = 0;
 		
@@ -8260,7 +8049,7 @@ static void PM_Weapon( void )
 
 		case WP_BLASTER:
 			if ( (pm->ps->clientNum && pm->gent && pm->gent->NPC && (pm->gent->NPC->scriptFlags&SCF_ALT_FIRE)) ||
-				(!pm->ps->clientNum && cg.zoomMode == 4 ) )
+				(!pm->ps->clientNum && (cg.zoomMode == 2 || (cg.renderingThirdPerson && cg_thirdPersonRange.value == 20))))
 			{//NPC or player in alt-fire, sniper mode
 				PM_SetAnim( pm, SETANIM_TORSO, BOTH_ATTACK4, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD|SETANIM_FLAG_RESTART);
 			}
@@ -8315,14 +8104,7 @@ static void PM_Weapon( void )
 		case WP_REPEATER:
 			if ( pm->gent && pm->gent->client && pm->gent->client->NPC_class == CLASS_GALAKMECH )
 			{//
-				if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
-				{
-					PM_SetAnim(pm,SETANIM_TORSO,BOTH_ATTACK3,SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_RESTART|SETANIM_FLAG_HOLD);
-				}
-				else
-				{
-					PM_SetAnim(pm,SETANIM_TORSO,BOTH_ATTACK1,SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_RESTART|SETANIM_FLAG_HOLD);
-				}
+				PM_SetAnim(pm,SETANIM_TORSO,BOTH_ATTACK1,SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_RESTART|SETANIM_FLAG_HOLD);
 			}
 			else
 			{
@@ -8336,12 +8118,9 @@ static void PM_Weapon( void )
 		}
 	}
 
-	if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
-	{
+	if ( pm->cmd.buttons & BUTTON_ALT_ATTACK ) {
 		amount = weaponData[pm->ps->weapon].altEnergyPerShot;
-	}
-	else
-	{
+	} else {
 		amount = weaponData[pm->ps->weapon].energyPerShot;
 	}
 
@@ -8385,14 +8164,10 @@ static void PM_Weapon( void )
 	{
 		PM_AddEvent( EV_FIRE_WEAPON );
 		addTime = pm->ps->torsoAnimTimer;
-	}
-	else if ( pm->cmd.buttons & BUTTON_ALT_ATTACK ) 	
-	{
+	} else if ( pm->cmd.buttons & BUTTON_ALT_ATTACK && (pm->ps->weapon == WP_DET_PACK || pm->ps->weapon == WP_TRIP_MINE)) {
 		PM_AddEvent( EV_ALT_FIRE );
-		addTime = weaponData[pm->ps->weapon].altFireTime;
-	}
-	else 
-	{
+		addTime = weaponData[pm->ps->weapon].fireTime;
+	} else {
 		if ( pm->ps->clientNum //NPC
 			&& !PM_ControlledByPlayer() //not under player control
 			&& pm->ps->weapon == WP_THERMAL //using thermals
@@ -8400,17 +8175,15 @@ static void PM_Weapon( void )
 		{//oops, got knocked out of the anim, don't throw the thermal
 			return;
 		}
+
 		PM_AddEvent( EV_FIRE_WEAPON );
 		addTime = weaponData[pm->ps->weapon].fireTime;
-
+				
 		switch( pm->ps->weapon)
 		{
 		case WP_REPEATER:
 			// repeater is supposed to do smoke after sustained bursts
 			pm->ps->weaponShotCount++;
-			break;
-		case WP_BOWCASTER:
-			addTime *= (( trueCount < 3 ) ? 0.35f : 1.0f );// if you only did a small charge shot with the bowcaster, use less time between shots
 			break;
 		}
 	}
@@ -8642,14 +8415,7 @@ void PM_AdjustAttackStates( pmove_t *pm )
 	int amount;
 
 	// get ammo usage
-	if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
-	{
-		amount = pm->ps->ammo[weaponData[ pm->ps->weapon ].ammoIndex] - weaponData[pm->ps->weapon].altEnergyPerShot;
-	}
-	else
-	{
-		amount = pm->ps->ammo[weaponData[ pm->ps->weapon ].ammoIndex] - weaponData[pm->ps->weapon].energyPerShot;
-	}
+	amount = pm->ps->ammo[weaponData[ pm->ps->weapon ].ammoIndex] - weaponData[pm->ps->weapon].energyPerShot;
 
 	if ( pm->ps->weapon == WP_SABER && (!cg.zoomMode||pm->ps->clientNum) )
 	{//don't let the alt-attack be interpreted as an actual attack command
@@ -8660,45 +8426,28 @@ void PM_AdjustAttackStates( pmove_t *pm )
 			pm->cmd.buttons &= ~BUTTON_ATTACK;
 		}
 	}
-
-	// disruptor alt-fire should toggle the zoom mode, but only bother doing this for the player?
-	if ( (pm->ps->weapon == WP_BLASTER || pm->ps->weapon == WP_DISRUPTOR || pm->ps->weapon == WP_BOWCASTER) && pm->gent && pm->gent->s.number == 0 && pm->ps->weaponstate != WEAPON_DROPPING )
-	{
-		//we are not alt-firing yet, but the alt-attack button was just pressed
-		if ( (!(pm->ps->eFlags & EF_ALT_FIRING) && (pm->cmd.buttons & BUTTON_ALT_ATTACK) && pm->ps->weapon != WP_DISRUPTOR) || (!(pm->ps->eFlags & EF_ALT_FIRING) && (pm->cmd.buttons & BUTTON_ALT_ATTACK) && pm->ps->weapon == WP_DISRUPTOR && pm->ps->groundEntityNum != ENTITYNUM_NONE && pm->cmd.upmove <= 0))
+	//we are not alt-firing yet, but the alt-attack button was just pressed
+	if ( pm->ps->weapon != WP_DET_PACK && pm->ps->weapon != WP_TRIP_MINE && pm->ps->weapon != WP_STUN_BATON ) { //I don't want to get in here if I'm selecting the det packs, mines or stun baton
+		if ( ((pm->cmd.buttons & BUTTON_ALT_ATTACK && pm->ps->weapon != WP_DISRUPTOR) || (pm->cmd.buttons & BUTTON_ALT_ATTACK && pm->ps->weapon == WP_DISRUPTOR && pm->ps->groundEntityNum != ENTITYNUM_NONE && pm->cmd.upmove <= 0)) && pm->gent && pm->gent->s.number == 0 && pm->ps->weaponstate != WEAPON_DROPPING)
 		{
 			// We just pressed the alt-fire key
 			if ( cg.zoomMode == 0 )
 			{
 				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomstart.wav" );
-				// not already zooming, so do it now
-				if (pm->ps->weapon == WP_DISRUPTOR) {
-					cg.zoomMode = 2;
-					cg.zoomTime = cg.time;
-					cg.zoomLocked = qtrue;
-					cg_zoomFov = 20.0f;
-				} else {
-					if ( cg.renderingThirdPerson ) {
-						cg_thirdPersonRange.value = 20 ;
-					} else {
-						cg.zoomMode = 2;
-						cg.zoomTime = cg.time;
-						cg.zoomLocked = qtrue;
-						cg_zoomFov = 65.0f;//(cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
-						cg_gun_z.value = 3;//Brings the weapon up closer to the eye level
-						cg_gun_y.value = 2;//Brings the weapon to the center of the screen
-						//cg_gun_x.value = -1;//Brings the weapon back closer to the eye level
-					}
+				if ( cg.renderingThirdPerson ) {
+					cg_thirdPersonRange.value = 20;
 				}
+				cg.zoomMode = 2;
+				cg.zoomTime = cg.time;
+				cg.zoomLocked = qtrue;
+				setZoomGunOffset ( pm->ps->weapon );
 			}
 		} else if ( !(pm->cmd.buttons & BUTTON_ALT_ATTACK )) { //Releasing the alt fire button releases the zoom.
 			// Not pressing zoom any more
-			if (cg.renderingThirdPerson ) {
+			if ( cg.renderingThirdPerson ) {
 				cg_thirdPersonRange.value = 40;
 			}
-			if (cg.zoomMode == 2) {
-				// were zooming in, so now lock the zoom
-				//cg.zoomLocked = qtrue;
+			if ( cg.zoomMode == 2 ) {
 				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomend.wav" );
 				cg.zoomMode = 0;
 				cg.zoomTime = cg.time;
@@ -8706,23 +8455,6 @@ void PM_AdjustAttackStates( pmove_t *pm )
 				setCustomGunOffset ( pm->ps->weapon );
 			}
 		}
-
-		if ( pm->cmd.buttons & BUTTON_ATTACK )
-		{
-			// If we are zoomed, we should switch the ammo usage to the alt-fire, otherwise, we'll
-			//	just use whatever ammo was selected from above
-			if ( cg.zoomMode == 2 )
-			{
-				amount = pm->ps->ammo[weaponData[ pm->ps->weapon ].ammoIndex] - 
-							weaponData[pm->ps->weapon].altEnergyPerShot;
-			}
-		}
-		else
-		{
-			// alt-fire button pressing doesn't use any ammo
-			amount = 0;
-		}
-
 	}
 
 	// Check for binocular specific mode
@@ -8762,9 +8494,7 @@ void PM_AdjustAttackStates( pmove_t *pm )
 			{//switch ATST barrels
 				pm->gent->alt_fire = qtrue;
 			}
-		}
-		else
-		{
+		} else {
 			pm->ps->eFlags &= ~EF_ALT_FIRING;
 			if ( !pm->ps->clientNum && pm->gent && (pm->ps->eFlags&EF_IN_ATST) )
 			{//switch ATST barrels
@@ -8774,41 +8504,10 @@ void PM_AdjustAttackStates( pmove_t *pm )
 
 		// This flag should always get set, even when alt-firing
 		pm->ps->eFlags |= EF_FIRING;
-	} 
-	else 
-	{
-//		int iFlags = pm->ps->eFlags;
-
+	} else {
 		// Clear 'em out
 		pm->ps->eFlags &= ~EF_FIRING;
 		pm->ps->eFlags &= ~EF_ALT_FIRING;
-
-		// if I don't check the flags before stopping FX then it switches them off too often, which tones down
-		//	the stronger FFFX so you can hardly feel them. However, if you only do iton these flags then the 
-		//	repeat-fire weapons like tetrion and dreadnought don't switch off quick enough. So...
-		//
-/* // Might need this for beam type weapons
-		if ( pm->ps->weapon == WP_DREADNOUGHT || (iFlags & (EF_FIRING|EF_ALT_FIRING) )
-		{
-			cgi_FF_StopAllFX();
-		}
-		*/
-	}
-
-	// disruptor should convert a main fire to an alt-fire if the gun is currently zoomed
-	if ( (pm->ps->weapon == WP_DISRUPTOR || pm->ps->weapon == WP_BLASTER || pm->ps->weapon == WP_BOWCASTER) && pm->gent && pm->gent->s.number == 0 )
-	{
-		if ( pm->cmd.buttons & BUTTON_ATTACK && cg.zoomMode == 2)
-		{
-			// converting the main fire to an alt-fire
-			pm->cmd.buttons |= BUTTON_ALT_ATTACK;
-			pm->ps->eFlags |= EF_ALT_FIRING;
-		}
-		else
-		{
-			// don't let an alt-fire through
-			pm->cmd.buttons &= ~BUTTON_ALT_ATTACK;
-		}
 	}
 }
 

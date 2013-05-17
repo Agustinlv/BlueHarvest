@@ -55,7 +55,7 @@ enum
 };
 
 qboolean NPC_CheckPlayerTeamStealth( void );
-gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t *owner, qboolean altFire = qfalse );
+gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t *owner );
 void Mark1_BlasterAttack(qboolean advance);
 void DeathFX( gentity_t *ent );
 extern gitem_t	*FindItemForAmmo( ammo_t ammo );

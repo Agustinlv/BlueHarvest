@@ -23,7 +23,7 @@ This file is part of Jedi Knight 2.
 #include "b_local.h"
 #include "g_nav.h"
 
-gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t *owner, qboolean altFire = qfalse );
+gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t *owner);
 extern gitem_t	*FindItemForAmmo( ammo_t ammo );
 extern void G_SoundOnEnt( gentity_t *ent, soundChannel_t channel, const char *soundPath );
 

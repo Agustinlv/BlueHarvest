@@ -403,7 +403,7 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 	trace_t		trace;
 	qboolean	lockedYaw = qfalse;
 	int			transitionTime = 1;
-	int			leanofsIncrements = 4;
+	int			leanofsIncrements = 2;
 
 	if ( ps->pm_type == PM_INTERMISSION ) 
 	{

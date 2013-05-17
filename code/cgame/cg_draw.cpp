@@ -615,7 +615,6 @@ static void CG_DrawHealthVisual(void)
 		calcColor[3] = alphaScale;
 		cgi_R_SetColor( calcColor);
 		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage75);
-		cgi_R_SetColor( calcColor);					
 		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage50);
 		calcColor[3] = (1.0f - (float) (ps->stats[STAT_HEALTH] - QuarterHealth ) / QuarterHealth)*alphaScale;
 		cgi_R_SetColor( calcColor);					
@@ -626,9 +625,7 @@ static void CG_DrawHealthVisual(void)
 		calcColor[3] = alphaScale;
 		cgi_R_SetColor( calcColor);
 		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage75);
-		cgi_R_SetColor( calcColor);					
 		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage50);
-		cgi_R_SetColor( calcColor);					
 		CG_DrawPic( 0, 0, 640, 480, cgs.media.HUDHealthDamage25);
 		calcColor[3] = (1.0f - (float) ps->stats[STAT_HEALTH] / QuarterHealth)*alphaScale;
 		cgi_R_SetColor( calcColor);					
@@ -1077,12 +1074,14 @@ static void CG_DrawZoomMask( void )
 			CG_DrawPic( 60, 394.5f, charge * 141, 5, cgs.media.whiteShader );
 		}
 	}
-	//------------
-	// Disruptor 
-	//--------------------------------
+	//Corto
+	//----------------------------//
+	// Ironsights & Scoped Weapons// 
+	//----------------------------//
 	else if ( cg.zoomMode == 2 )
 	{
-		if (cg.snap->ps.weapon != WP_DISRUPTOR)
+		//I don't want this happening to non scoped weapons
+		if (cg.snap->ps.weapon != WP_DISRUPTOR && cg.snap->ps.weapon != WP_ROCKET_LAUNCHER)
 		{
 			return;
 		}
@@ -1106,7 +1105,7 @@ static void CG_DrawZoomMask( void )
 		cgi_R_SetColor( colorTable[CT_WHITE] );
 		CG_DrawPic( 0, 0, 640, 480, cgs.media.disruptorMask );
 
-		// apparently 99.0f is the full zoom level
+		/*// apparently 99.0f is the full zoom level
 		if ( level >= 99 )
 		{
 			// Fully zoomed, so make the rotating insert pulse
@@ -1178,7 +1177,7 @@ static void CG_DrawZoomMask( void )
 			}
 
 			CG_DrawPic2( 257, 435, 134 * max, 34, 0,0,max,1,cgi_R_RegisterShaderNoMip( "gfx/2d/crop_charge" ));
-		}
+		}*/
 	}
 	//-----------
 	// Light Amp
@@ -1378,9 +1377,35 @@ static void CG_DrawCrosshair( vec3_t worldPoint )
 	//Corto
 	//Ironsights
 	//I modified this check so when zooming though the ironsights the crosshair remains on screen
-	if ( (cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR) || cg.zoomMode == 1 || !cg_drawCrosshair.integer || cg.snap->ps.weapon == WP_SABER )
+	if ( !cg_drawCrosshair.integer || cg.zoomMode == 1 || cg.zoomMode == 3 || cg.zoomMode == 0)
 	{
 		return;
+	}
+
+	if ( cg.zoomMode == 2) {
+		switch ( cg.snap->ps.weapon )
+		{
+		case WP_DISRUPTOR:
+			return;
+			break;
+		case WP_DET_PACK:
+			return;
+			break;
+		case WP_TRIP_MINE:
+			return;
+			break;
+		case WP_ROCKET_LAUNCHER:
+			return;
+			break;
+		case WP_REPEATER:
+			return;
+			break;
+		case WP_STUN_BATON:
+			return;
+			break;
+		default:
+			break;
+		}
 	}
 
 	//set color based on what kind of ent is under crosshair

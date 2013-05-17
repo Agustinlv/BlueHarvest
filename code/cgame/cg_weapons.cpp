@@ -85,16 +85,16 @@ void CG_RegisterWeapon( int weaponNum ) {
 	{//in case the weaponmodel isn't _w, precache the _w.glm
 		char weaponModel[64];
 		
-		strcpy (weaponModel, weaponData[weaponNum].weaponMdl);	
+		strcpy_s (weaponModel, weaponData[weaponNum].weaponMdl);	
 		if (char *spot = strstr(weaponModel, ".md3") ) 
 		{
 			*spot = 0;
 			spot = strstr(weaponModel, "_w");//i'm using the in view weapon array instead of scanning the item list, so put the _w back on
 			if (!spot) 
 			{
-				strcat (weaponModel, "_w");
+				strcat_s (weaponModel, "_w");
 			}
-			strcat (weaponModel, ".glm");	//and change to ghoul2
+			strcat_s (weaponModel, ".glm");	//and change to ghoul2
 		}
 		gi.G2API_PrecacheGhoul2Model( weaponModel ); // correct way is item->world_model
 	}
@@ -135,10 +135,10 @@ void CG_RegisterWeapon( int weaponNum ) {
 		{
 			char	crap[50];
 			sprintf(crap, "_barrel%d.md3", i+1);
-			strcat( path, crap);
+			strcat_s( path, crap);
 		}
 		else
-			strcat( path, "_barrel.md3" );
+			strcat_s( path, "_barrel.md3" );
 		weaponInfo->barrelModel[i] = cgi_R_RegisterModel( path );
 	}
 
@@ -150,9 +150,9 @@ void CG_RegisterWeapon( int weaponNum ) {
 	}
 
 	// set up the hand that holds the in view weapon - assuming we have one
-	strcpy( path, weaponData[weaponNum].weaponMdl );
+	strcpy_s( path, weaponData[weaponNum].weaponMdl );
 	COM_StripExtension( path, path );
-	strcat( path, "_hand.md3" );
+	strcat_s( path, "_hand.md3" );
 	weaponInfo->handsModel = cgi_R_RegisterModel( path );
 
 	if ( !weaponInfo->handsModel ) {
@@ -934,7 +934,7 @@ void CG_AddViewWeapon( playerState_t *ps )
 		}
 	}
 	// allow the gun to be completely removed
-	if ( !cg_drawGun.integer || (cg.zoomMode != 0 && (cg.zoomMode == 2 && cg.snap->ps.weapon == WP_DISRUPTOR))) 
+	if ( !cg_drawGun.integer || cg.snap->ps.weapon == WP_THERMAL || (cg.zoomMode != 0 && (cg.zoomMode == 2 && (cg.snap->ps.weapon == WP_DISRUPTOR || cg.snap->ps.weapon == WP_ROCKET_LAUNCHER)))) 
 	{
 		vec3_t		origin;
 
@@ -966,14 +966,10 @@ void CG_AddViewWeapon( playerState_t *ps )
 		return;
 	}
 
-	// drop gun lower at higher fov
 	float actualFOV;
-	if ( (cg.snap->ps.forcePowersActive&(1<<FP_SPEED)) && player->client->ps.forcePowerDuration[FP_SPEED] )//cg.renderingThirdPerson && 
-	{
+	if ( (cg.snap->ps.forcePowersActive&(1<<FP_SPEED)) && cg.snap->ps.forcePowerDuration[FP_SPEED] ) {
 		actualFOV = CG_ForceSpeedFOV();
-	}
-	else
-	{
+	} else {
 		actualFOV = (cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
 	}
 
@@ -2584,60 +2580,9 @@ void CG_FireWeapon( centity_t *cent, qboolean alt_fire )
 	{
 		if ( cent->pe.lightningFiring ) 
 		{
-/*			if ( ent->weapon == WP_DREADNOUGHT )
-			{
-				cgi_FF_EnsureFX( fffx_Laser3 );
-			}
-*/
 			return;
 		}
 	}
-
-	// Do overcharge sound that get's added to the top
-/*	if (( ent->powerups & ( 1<<PW_WEAPON_OVERCHARGE )))
-	{
-		if ( alt_fire )
-		{
-			switch( ent->weapon )
-			{
-			case WP_THERMAL:
-			case WP_DET_PACK:
-			case WP_TRIP_MINE:
-			case WP_ROCKET_LAUNCHER:
-			case WP_FLECHETTE:
-				// these weapon fires don't overcharge
-				break;
-
-			case WP_BLASTER:
-				cgi_S_StartSound( NULL, ent->number, CHAN_AUTO, cgs.media.overchargeFastSound );
-				break;
-
-			default:
-				cgi_S_StartSound( NULL, ent->number, CHAN_AUTO, cgs.media.overchargeSlowSound );
-				break;
-			}
-		}
-		else
-		{
-			switch( ent->weapon )
-			{
-			case WP_THERMAL:
-			case WP_DET_PACK:
-			case WP_TRIP_MINE:
-			case WP_ROCKET_LAUNCHER:
-				// these weapon fires don't overcharge
-				break;
-
-			case WP_REPEATER:
-				cgi_S_StartSound( NULL, ent->number, CHAN_AUTO, cgs.media.overchargeFastSound );
-				break;
-
-			default:
-				cgi_S_StartSound( NULL, ent->number, CHAN_AUTO, cgs.media.overchargeSlowSound );
-				break;
-			}
-		}
-	}*/
 }
 
 /*
@@ -2944,26 +2889,71 @@ void CG_MissileHitPlayer( centity_t *cent, int weapon, vec3_t origin, vec3_t dir
 	}
 }
 
-void resetGunOffsets (void)
-{
-	cg_gun_x.value = 0;
-	cg_gun_y.value = 0;
-	cg_gun_z.value = 0;
-}
-
 void setCustomGunOffset (int weaponNumber)
 {
 	switch (weaponNumber)
 	{
-		case WP_ROCKET_LAUNCHER:
-			cg_gun_x.value = -4;
-			cg_gun_y.value = -3;
-			cg_gun_z.value = 4;
-			break;
-		default:
-			cg_gun_x.value = 0;
-			cg_gun_y.value = 0;
-			cg_gun_z.value = 0;
-			break;
+	case WP_ROCKET_LAUNCHER:
+		cg_gun_x.value = -2;
+		cg_gun_y.value = -2;
+		cg_gun_z.value = -1;
+		break;
+	default:
+		cg_gun_x.value = 0;
+		cg_gun_y.value = 0;
+		cg_gun_z.value = 0;
+		break;
+	}
+}
+
+extern float cg_zoomFov;
+
+//Corto
+//Set custom field of views and offsets for every weapon
+void setZoomGunOffset (int weaponNumber)
+{
+	float actualFOV = (cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
+	switch (weaponNumber)
+	{
+	case WP_BRYAR_PISTOL:
+		cg_zoomFov = actualFOV - 10.0;
+		cg_gun_z.value = 3;
+		cg_gun_y.value = 3;
+		cg_gun_x.value = 1;
+		break;
+	case WP_BLASTER:
+		cg_zoomFov = actualFOV - 20.0f;
+		cg_gun_z.value = 3;
+		cg_gun_y.value = 2;
+		break;
+	case WP_DISRUPTOR:
+		cg_zoomFov = actualFOV - 65.0f;
+		break;
+	case WP_BOWCASTER:
+		cg_zoomFov = actualFOV - 20.0f;
+		cg_gun_z.value = 3;
+		cg_gun_y.value = 2;
+		break;
+	case WP_REPEATER:
+		cg_zoomFov = actualFOV - 20.0f;
+		cg_gun_z.value = 2.5;
+		cg_gun_y.value = 4;
+		break;
+	case WP_DEMP2:
+		cg_zoomFov = actualFOV - 15.0f;
+		cg_gun_z.value = 2;
+		cg_gun_y.value = 1;
+		break;
+	case WP_FLECHETTE:
+		cg_zoomFov = actualFOV - 10.0f;
+		cg_gun_z.value = 2.5;
+		cg_gun_y.value = 2;
+		break;
+	case WP_ROCKET_LAUNCHER:
+		cg_zoomFov = actualFOV - 45.0f;
+		break;
+	default:
+		cg_zoomFov = actualFOV;
+		break;
 	}
 }

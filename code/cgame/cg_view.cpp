@@ -452,11 +452,12 @@ static void CG_CalcIdealThirdPersonViewLocation(void)
 	{
 		VectorMA(cameraIdealTarget, -(cg_thirdPersonRange.value), camerafwd, cameraIdealLoc);
 	}
-	if ( cg.renderingThirdPerson && (cg.snap->ps.forcePowersActive&(1<<FP_SPEED)) && player->client->ps.forcePowerDuration[FP_SPEED] )
+	//Corto - Removed the thirdperson force speed zoom.
+	if ( cg.renderingThirdPerson && (cg.snap->ps.forcePowersActive&(1<<FP_SPEED)) && cg.snap->ps.forcePowerDuration[FP_SPEED] )
 	{
-		float timeLeft = player->client->ps.forcePowerDuration[FP_SPEED] - cg.time;
-		float length = FORCE_SPEED_DURATION*forceSpeedValue[player->client->ps.forcePowerLevel[FP_SPEED]];
-		float amt = forceSpeedRangeMod[player->client->ps.forcePowerLevel[FP_SPEED]];
+		float timeLeft = cg.snap->ps.forcePowerDuration[FP_SPEED] - cg.time;
+		float length = FORCE_SPEED_DURATION*forceSpeedValue[cg.snap->ps.forcePowerLevel[FP_SPEED]];
+		float amt = forceSpeedRangeMod[cg.snap->ps.forcePowerLevel[FP_SPEED]]/2;
 		if ( timeLeft < 500 )
 		{//start going back
 			VectorMA(cameraIdealLoc, (timeLeft)/500*amt, camerafwd, cameraIdealLoc);
@@ -471,8 +472,6 @@ static void CG_CalcIdealThirdPersonViewLocation(void)
 		}
 	}
 }
-
-
 
 static void CG_ResetThirdPersonViewDamp(void)
 {
@@ -1294,9 +1293,9 @@ qboolean CG_CalcFOVFromX( float fov_x )
 float CG_ForceSpeedFOV( void )
 {
 	float fov;
-	float timeLeft = player->client->ps.forcePowerDuration[FP_SPEED] - cg.time;
-	float length = FORCE_SPEED_DURATION*forceSpeedValue[player->client->ps.forcePowerLevel[FP_SPEED]];
-	float amt = forceSpeedFOVMod[player->client->ps.forcePowerLevel[FP_SPEED]];
+	float timeLeft = cg.snap->ps.forcePowerDuration[FP_SPEED] - cg.time;
+	float length = FORCE_SPEED_DURATION*forceSpeedValue[cg.snap->ps.forcePowerLevel[FP_SPEED]];
+	float amt = forceSpeedFOVMod[cg.snap->ps.forcePowerLevel[FP_SPEED]]/2;
 	if ( timeLeft < 500 )
 	{//start going back
 		fov = cg_fov.value + (timeLeft)/500*amt;
@@ -1359,7 +1358,7 @@ static qboolean	CG_CalcFov( void ) {
 			}
 		}
 	} 
-	else if ( (!cg.zoomMode || cg.zoomMode > 2) && (cg.snap->ps.forcePowersActive&(1<<FP_SPEED)) && player->client->ps.forcePowerDuration[FP_SPEED] )//cg.renderingThirdPerson && 
+	else if ( (!cg.zoomMode || cg.zoomMode > 2) && (cg.snap->ps.forcePowersActive&(1<<FP_SPEED)) && cg.snap->ps.forcePowerDuration[FP_SPEED] )
 	{
 		fov_x = CG_ForceSpeedFOV();
 	} else {
@@ -1439,7 +1438,6 @@ static qboolean	CG_CalcFov( void ) {
 		}
 	}
 
-//	g_fov = fov_x;
 	return ( CG_CalcFOVFromX( fov_x ) );
 }
 
@@ -1456,7 +1454,6 @@ static void CG_DamageBlendBlob( void )
 	int			t;
 	int			maxTime;
 	refEntity_t		ent;
-	//vec4_t			color1;
 
 	if ( !cg.damageValue ) {
 		return;

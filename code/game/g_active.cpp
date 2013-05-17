@@ -1275,19 +1275,6 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 			if ( ent->s.eType != ET_PLAYER ) {
 				break;		// not in the player model
 			}
-			/*
-			//FIXME: isn't there a more accurate way to calculate damage from falls?
-			if ( event == EV_FALL_FAR ) 
-			{
-				damage = 50;
-			} 
-			else 
-			{
-				damage = 25;
-			}
-			ent->painDebounceTime = level.time + 200;	// no normal pain sound
-			G_Damage (ent, NULL, NULL, NULL, NULL, damage, 0, MOD_FALLING);
-			*/
 			break;
 
 		case EV_FIRE_WEAPON:

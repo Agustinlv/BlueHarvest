@@ -44,7 +44,7 @@ enum
 	LSTATE_RISINGUP,
 };
 
-gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t *owner, qboolean altFire = qfalse );
+gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t *owner );
 
 void NPC_Mark2_Precache( void )
 {

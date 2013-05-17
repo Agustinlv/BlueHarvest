@@ -533,6 +533,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		CG_FireWeapon( cent, qfalse );
 		break;
 
+	//Corto
+	//Removing completely the alternative
 	case EV_ALT_FIRE:
 		//Corto
 		//If playing is sprinting it can't shoot or jumping (which is not the same as "in air"), just sprint

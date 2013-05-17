@@ -23,11 +23,11 @@ This file is part of Jedi Knight 2.
 #include "g_headers.h"
 
 
-
 #include "g_local.h"
 #include "g_functions.h"
 #include "anims.h"
 #include "b_local.h"
+#include "..\cgame\cg_headers.h"
 
 static	vec3_t	wpForward, wpVright, wpUp;
 static	vec3_t	wpMuzzle;
@@ -53,7 +53,7 @@ static gentity_t *ent_list[MAX_GENTITIES];
 //---------
 #define BLASTER_MAIN_SPREAD			1.5f
 #define BLASTER_ALT_SPREAD			0.1f
-#define BLASTER_NPC_SPREAD			0.2f
+#define BLASTER_NPC_SPREAD			0.1f
 #define BLASTER_VELOCITY			4500
 #define BLASTER_NPC_VEL_CUT			0.5f
 #define BLASTER_NPC_HARD_VEL_CUT	0.7f
@@ -87,7 +87,8 @@ static gentity_t *ent_list[MAX_GENTITIES];
 #define BOWCASTER_SPLASH_RADIUS		0
 #define BOWCASTER_SIZE				2
 
-#define BOWCASTER_ALT_SPREAD		0.5f
+#define BOWCASTER_MAIN_SPREAD		1.5f
+#define BOWCASTER_ALT_SPREAD		0.3f
 #define BOWCASTER_VEL_RANGE			0.3f
 #define BOWCASTER_CHARGE_UNIT		200.0f	// bowcaster charging gives us one more unit every 200ms--if you change this, you'll have to do the same in bg_pmove
 
@@ -227,17 +228,17 @@ int	g_rocketSlackTime = 0;
 #define TD_SPLASH_DAM		90
 #define TD_VELOCITY			900
 #define TD_MIN_CHARGE		0.15f
-#define TD_TIME				4000
+#define TD_TIME				1000
 #define TD_THINK_TIME		300		// don't think too often?
 #define TD_TEST_RAD			(TD_SPLASH_RAD * 0.8f) // no sense in auto-blowing up if exactly on the radius edge--it would hardly do any damage
-#define TD_ALT_TIME			3000
+#define TD_ALT_TIME			1000
 
 #define TD_ALT_DAMAGE		100
 #define TD_ALT_SPLASH_RAD	128
 #define TD_ALT_SPLASH_DAM	90
-#define TD_ALT_VELOCITY		600
+#define TD_ALT_VELOCITY		900
 #define TD_ALT_MIN_CHARGE	0.15f
-#define TD_ALT_TIME			3000
+#define TD_ALT_TIME			1000
 
 // Weapon Helper Functions
 
@@ -276,7 +277,7 @@ static void WP_TraceSetStart( const gentity_t *ent, vec3_t start, const vec3_t m
 }
 
 //-----------------------------------------------------------------------------
-gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t *owner, qboolean altFire = qfalse )
+gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t *owner)
 //-----------------------------------------------------------------------------
 {
 	gentity_t	*missile;
@@ -288,7 +289,7 @@ gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life, gentity_t
 	missile->s.eType = ET_MISSILE;
 	missile->owner = owner;
 
-	missile->alt_fire = altFire;
+	missile->alt_fire = qfalse;
 
 	missile->s.pos.trType = TR_LINEAR;
 	missile->s.pos.trTime = level.time;// - 10;	// move a bit on the very first frame
@@ -488,13 +489,10 @@ void FireSeeker( gentity_t *owner, gentity_t *target, vec3_t origin, vec3_t dir 
 ----------------------------------------------
 */
 
-//---------------
-//	Bryar Pistol
-//---------------
-
-//---------------------------------------------------------
-static void WP_FireBryarPistol( gentity_t *ent, qboolean alt_fire )
-//---------------------------------------------------------
+//--------------//
+//	Bryar Pistol//
+//--------------//
+static void WP_FireBryarPistol( gentity_t *ent )
 {
 	vec3_t	start, angs;
 	int		damage = BRYAR_PISTOL_DAMAGE;
@@ -512,46 +510,15 @@ static void WP_FireBryarPistol( gentity_t *ent, qboolean alt_fire )
 		
 	AngleVectors( angs, wpForward, NULL, NULL );
 	
-	gentity_t	*missile = CreateMissile( start, wpForward, BRYAR_PISTOL_VEL, 10000, ent, alt_fire );
+	gentity_t	*missile = CreateMissile( start, wpForward, BRYAR_PISTOL_VEL, 10000, ent );
 
 	missile->classname = "bryar_proj";
 	missile->s.weapon = WP_BRYAR_PISTOL;
 
-	if ( alt_fire )
-	{
-		int count = ( level.time - ent->client->ps.weaponChargeTime ) / BRYAR_CHARGE_UNIT;
-
-		if ( count < 1 )
-		{
-			count = 1;
-		}
-		else if ( count > 5 )
-		{
-			count = 5;
-		}
-
-		damage *= count;
-		missile->count = count; // this will get used in the projectile rendering code to make a beefier effect
-	}
-
-//	if ( ent->client && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > 0 && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > cg.time )
-//	{
-//		// in overcharge mode, so doing double damage
-//		missile->flags |= FL_OVERCHARGED;
-//		damage *= 2;
-//	}
-
 	missile->damage = damage;
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 
-	if ( alt_fire )
-	{
-		missile->methodOfDeath = MOD_BRYAR_ALT;
-	}
-	else
-	{
-		missile->methodOfDeath = MOD_BRYAR;
-	}
+	missile->methodOfDeath = MOD_BRYAR;
 
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
 
@@ -559,14 +526,10 @@ static void WP_FireBryarPistol( gentity_t *ent, qboolean alt_fire )
 	missile->bounceCount = 8;
 }
 
-
-//---------------
-//	Blaster
-//---------------
-
-//---------------------------------------------------------
-static void WP_FireBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qboolean altFire )
-//---------------------------------------------------------
+//-----------------------------------//
+//E-11 Blaster Rifle / Blaster Pistol//
+//-----------------------------------//
+static void WP_FireBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir)
 {
 	int velocity	= BLASTER_VELOCITY;
 	int	damage		= BLASTER_DAMAGE;
@@ -586,7 +549,7 @@ static void WP_FireBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qbo
 
 	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
 
-	gentity_t *missile = CreateMissile( start, dir, velocity, 10000, ent, altFire );
+	gentity_t *missile = CreateMissile( start, dir, velocity, 10000, ent );
 
 	missile->classname = "blaster_proj";
 	missile->s.weapon = WP_BLASTER;
@@ -620,14 +583,14 @@ static void WP_FireBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qbo
 
 	missile->damage = damage;
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-	if ( altFire )
-	{
+	//if ( altFire )
+	//{
 		missile->methodOfDeath = MOD_BLASTER;
-	}
-	else
-	{
-		missile->methodOfDeath = MOD_BLASTER_ALT;
-	}
+	//}
+	//else
+	//{
+	//	missile->methodOfDeath = MOD_BLASTER_ALT;
+	//}
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
 
 	// we don't want it to bounce forever
@@ -635,7 +598,7 @@ static void WP_FireBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qbo
 }
 
 //---------------------------------------------------------
-static void WP_FireBlaster( gentity_t *ent, qboolean alt_fire )
+static void WP_FireBlaster( gentity_t *ent )
 //---------------------------------------------------------
 {
 	vec3_t	dir, angs;
@@ -645,7 +608,7 @@ static void WP_FireBlaster( gentity_t *ent, qboolean alt_fire )
 	CalculateSpreads ( ent, BLASTER_MAIN_SPREAD, BLASTER_ALT_SPREAD);
 		
 	//Randomizes the spread angles calculated before
-	if ( alt_fire )
+	if ( ent->client->buttons & BUTTON_ALT_ATTACK )
 	{
 		angs[PITCH] += crandom() * alt_spread;
 		angs[YAW]	+= crandom() * alt_spread;
@@ -659,7 +622,7 @@ static void WP_FireBlaster( gentity_t *ent, qboolean alt_fire )
 	AngleVectors( angs, dir, NULL, NULL );
 
 	// FIXME: if temp_org does not have clear trace to inside the bbox, don't shoot!
-	WP_FireBlasterMissile( ent, wpMuzzle, dir, alt_fire );
+	WP_FireBlasterMissile( ent, wpMuzzle, dir );
 }
 
 
@@ -981,140 +944,30 @@ void WP_DisruptorAltFire( gentity_t *ent )
 }
 
 //---------------------------------------------------------
-static void WP_FireDisruptor( gentity_t *ent, qboolean alt_fire )
+static void WP_FireDisruptor( gentity_t *ent )
 //---------------------------------------------------------
 {
-	if ( alt_fire )
-	{
-		WP_DisruptorAltFire( ent );
-	}
-	else
-	{
-		WP_DisruptorMainFire( ent );
-	}
-
+	WP_DisruptorAltFire( ent );
+		
 	G_PlayEffect( G_EffectIndex( "disruptor/line_cap" ), wpMuzzle, wpForward );
 }
 
 
-//-------------------
-//	Wookiee Bowcaster
-//-------------------
-
-//---------------------------------------------------------
-static void WP_BowcasterMainFire( gentity_t *ent )
-//---------------------------------------------------------
+//---------
+//Bowcaster
+//---------
+static void WP_FireBowcaster( gentity_t *ent )
 {
-	int			damage	= BOWCASTER_DAMAGE, count;
-	float		vel;
 	vec3_t		angs, dir, start;
 	gentity_t	*missile;
-
-	VectorCopy( wpMuzzle, start );
-	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
-
-	// Do the damages
-	if ( ent->s.number != 0 )
-	{
-		if ( g_spskill->integer == 0 )
-		{
-			damage = BOWCASTER_NPC_DAMAGE_EASY;
-		}
-		else if ( g_spskill->integer == 1 )
-		{
-			damage = BOWCASTER_NPC_DAMAGE_NORMAL;
-		}
-		else
-		{
-			damage = BOWCASTER_NPC_DAMAGE_HARD;
-		}
-	}
-
-	count = ( level.time - ent->client->ps.weaponChargeTime ) / BOWCASTER_CHARGE_UNIT;
-
-	if ( count < 1 )
-	{
-		count = 1;
-	}
-	else if ( count > 5 )
-	{
-		count = 5;
-	}
-
-	if ( !(count & 1 ))
-	{
-		// if we aren't odd, knock us down a level
-		count--;
-	}
-
-//	if ( ent->client && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > 0 && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > cg.time )
-//	{
-//		// in overcharge mode, so doing double damage
-//		damage *= 2;
-//	}
-
-	for ( int i = 0; i < count; i++ )
-	{
-		// create a range of different velocities
-		vel = BOWCASTER_VELOCITY;
-
-		vectoangles( wpForward, angs );
-
-		CalculateSpreads (ent, BOWCASTER_ALT_SPREAD, BOWCASTER_ALT_SPREAD);
-
-		// add some slop to the fire direction
-		angs[PITCH] += crandom() * alt_spread;
-		angs[YAW]	+= crandom() * (alt_spread + i * 2.0f);
-		if ( ent->NPC )
-		{
-			angs[PITCH] += ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f) );
-			angs[YAW]	+= ( crandom() * (alt_spread+(6-ent->NPC->currentAim)*0.25f) );
-		}
-		
-		AngleVectors( angs, dir, NULL, NULL );
-
-		missile = CreateMissile( start, dir, vel, 10000, ent );
-
-		missile->classname = "bowcaster_proj";
-		missile->s.weapon = WP_BOWCASTER;
-
-		VectorSet( missile->maxs, BOWCASTER_SIZE, BOWCASTER_SIZE, BOWCASTER_SIZE );
-		VectorScale( missile->maxs, -1, missile->mins );
-
-//		if ( ent->client && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > 0 && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > cg.time )
-//		{
-//			missile->flags |= FL_OVERCHARGED;
-//		}
-
-		missile->damage = damage;
-		missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-		missile->methodOfDeath = MOD_BOWCASTER;
-		missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-		missile->splashDamage = BOWCASTER_SPLASH_DAMAGE;
-		missile->splashRadius = BOWCASTER_SPLASH_RADIUS;
-
-		// we don't want it to bounce
-		missile->bounceCount = 0;
-		ent->client->sess.missionStats.shotsFired++;
-	}
-}
-
-//---------------------------------------------------------
-static void WP_BowcasterAltFire( gentity_t *ent )
-//---------------------------------------------------------
-{
-	vec3_t	start;
 	int		damage	= BOWCASTER_DAMAGE;
 
 	VectorCopy( wpMuzzle, start );
 	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
 
-	gentity_t *missile = CreateMissile( start, wpForward, BOWCASTER_VELOCITY, 10000, ent, qtrue );
+	vectoangles( wpForward, angs );
 
-	missile->classname = "bowcaster_alt_proj";
-	missile->s.weapon = WP_BOWCASTER;
-
-	// Do the damages
+		// Do the damages
 	if ( ent->s.number != 0 )
 	{
 		if ( g_spskill->integer == 0 )
@@ -1130,19 +983,33 @@ static void WP_BowcasterAltFire( gentity_t *ent )
 			damage = BOWCASTER_NPC_DAMAGE_HARD;
 		}
 	}
+	
+	CalculateSpreads (ent, BOWCASTER_MAIN_SPREAD, BOWCASTER_ALT_SPREAD);
+
+	// add some slop to the fire direction
+	//Randomizes the spread angles calculated before
+	if ( ent->client->buttons & BUTTON_ALT_ATTACK )
+	{
+		angs[PITCH] += crandom() * alt_spread;
+		angs[YAW]	+= crandom() * alt_spread;
+	}
+	else
+	{
+		angs[PITCH] += crandom() * spread;
+		angs[YAW]	+= crandom() * spread;
+	}
+		
+	AngleVectors( angs, dir, NULL, NULL );
+	
+	missile = CreateMissile( start, dir, BOWCASTER_VELOCITY, 10000, ent );
+
+	missile->classname = "bowcaster_alt_proj";
+	missile->s.weapon = WP_BOWCASTER;
 
 	VectorSet( missile->maxs, BOWCASTER_SIZE, BOWCASTER_SIZE, BOWCASTER_SIZE );
 	VectorScale( missile->maxs, -1, missile->mins );
 
-//	if ( ent->client && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > 0 && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > cg.time )
-//	{
-//		// in overcharge mode, so doing double damage
-//		missile->flags |= FL_OVERCHARGED;
-//		damage *= 2;
-//	}
-
-	missile->s.eFlags |= EF_BOUNCE;
-	missile->bounceCount = 3;
+	missile->bounceCount = 0;
 
 	missile->damage = damage;
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
@@ -1152,75 +1019,10 @@ static void WP_BowcasterAltFire( gentity_t *ent )
 	missile->splashRadius = BOWCASTER_SPLASH_RADIUS;
 }
 
+//Corto
+//I'm leaving this for a possible concussion rifle
 //---------------------------------------------------------
-static void WP_FireBowcaster( gentity_t *ent, qboolean alt_fire )
-//---------------------------------------------------------
-{
-	if ( alt_fire )
-	{
-		WP_BowcasterAltFire( ent );
-	}
-	else
-	{
-		WP_BowcasterMainFire( ent );
-	}
-}
-
-
-//-------------------
-//	Heavy Repeater
-//-------------------
-
-//---------------------------------------------------------
-static void WP_RepeaterMainFire( gentity_t *ent, vec3_t dir )
-//---------------------------------------------------------
-{
-	vec3_t	start;
-	int		damage	= REPEATER_DAMAGE;
-
-	VectorCopy( wpMuzzle, start );
-	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
-
-	gentity_t *missile = CreateMissile( start, dir, REPEATER_VELOCITY, 10000, ent );
-
-	missile->classname = "repeater_proj";
-	missile->s.weapon = WP_REPEATER;
-
-	// Do the damages
-	if ( ent->s.number != 0 )
-	{
-		if ( g_spskill->integer == 0 )
-		{
-			damage = REPEATER_NPC_DAMAGE_EASY;
-		}
-		else if ( g_spskill->integer == 1 )
-		{
-			damage = REPEATER_NPC_DAMAGE_NORMAL;
-		}
-		else
-		{
-			damage = REPEATER_NPC_DAMAGE_HARD;
-		}
-	}
-
-//	if ( ent->client && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > 0 && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > cg.time )
-//	{
-//		// in overcharge mode, so doing double damage
-//		missile->flags |= FL_OVERCHARGED;
-//		damage *= 2;
-//	}
-
-	missile->damage = damage;
-	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-	missile->methodOfDeath = MOD_REPEATER;
-	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-
-	// we don't want it to bounce forever
-	missile->bounceCount = 8;
-}
-
-//---------------------------------------------------------
-static void WP_RepeaterAltFire( gentity_t *ent )
+static void WP_ConcussionFire( gentity_t *ent )
 //---------------------------------------------------------
 {
 	vec3_t	start;
@@ -1232,11 +1034,11 @@ static void WP_RepeaterAltFire( gentity_t *ent )
 
 	if ( ent->client && ent->client->NPC_class == CLASS_GALAKMECH )
 	{
-		missile = CreateMissile( start, ent->client->hiddenDir, ent->client->hiddenDist, 10000, ent, qtrue );
+		missile = CreateMissile( start, ent->client->hiddenDir, ent->client->hiddenDist, 10000, ent );
 	}
 	else
 	{
-		missile = CreateMissile( start, wpForward, REPEATER_ALT_VELOCITY, 10000, ent, qtrue );
+		missile = CreateMissile( start, wpForward, REPEATER_ALT_VELOCITY, 10000, ent );
 	}
 
 	missile->classname = "repeater_alt_proj";
@@ -1284,98 +1086,68 @@ static void WP_RepeaterAltFire( gentity_t *ent )
 	missile->bounceCount = 8;
 }
 
-//---------------------------------------------------------
-static void WP_FireRepeater( gentity_t *ent, qboolean alt_fire )
-//---------------------------------------------------------
+//------------------------------//
+//Repeater Rifle / Heavy Blaster//
+//------------------------------//
+static void WP_FireRepeater( gentity_t *ent)
 {
-	vec3_t	dir, angs;
+	vec3_t	dir, angs, start;
+	int		damage	= REPEATER_DAMAGE;
 
 	vectoangles( wpForward, angs );
 
-	if ( alt_fire )
+	// Troopers use their aim values as well as the gun's inherent inaccuracy
+	// so check for all classes of stormtroopers and anyone else that has aim error
+	if ( ent->client && ent->NPC &&
+		( ent->client->NPC_class == CLASS_STORMTROOPER ||
+			ent->client->NPC_class == CLASS_SWAMPTROOPER ||
+			ent->client->NPC_class == CLASS_SHADOWTROOPER ) )
 	{
-		WP_RepeaterAltFire( ent );
+		angs[PITCH] += ( crandom() * (REPEATER_NPC_SPREAD+(6-ent->NPC->currentAim)*0.25f) );
+		angs[YAW]	+= ( crandom() * (REPEATER_NPC_SPREAD+(6-ent->NPC->currentAim)*0.25f) );
 	}
 	else
 	{
-		// Troopers use their aim values as well as the gun's inherent inaccuracy
-		// so check for all classes of stormtroopers and anyone else that has aim error
-		if ( ent->client && ent->NPC &&
-			( ent->client->NPC_class == CLASS_STORMTROOPER ||
-			  ent->client->NPC_class == CLASS_SWAMPTROOPER ||
-			  ent->client->NPC_class == CLASS_SHADOWTROOPER ) )
-		{
-			angs[PITCH] += ( crandom() * (REPEATER_NPC_SPREAD+(6-ent->NPC->currentAim)*0.25f) );
-			angs[YAW]	+= ( crandom() * (REPEATER_NPC_SPREAD+(6-ent->NPC->currentAim)*0.25f) );
-		}
-		else
-		{
-			// add some slop to the alt-fire direction
-			angs[PITCH] += crandom() * REPEATER_SPREAD;
-			angs[YAW]	+= crandom() * REPEATER_SPREAD;
-		}
-
-		AngleVectors( angs, dir, NULL, NULL );
-
-		// FIXME: if temp_org does not have clear trace to inside the bbox, don't shoot!
-		WP_RepeaterMainFire( ent, dir );
+		angs[PITCH] += crandom() * REPEATER_SPREAD;
+		angs[YAW]	+= crandom() * REPEATER_SPREAD;
 	}
-}
 
-//-------------------
-//	DEMP2
-//-------------------
-
-//---------------------------------------------------------
-static void WP_DEMP2_MainFire( gentity_t *ent )
-//---------------------------------------------------------
-{
-	vec3_t	start;
-	int		damage	= DEMP2_DAMAGE;
+	AngleVectors( angs, dir, NULL, NULL );
 
 	VectorCopy( wpMuzzle, start );
 	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
 
-	gentity_t *missile = CreateMissile( start, wpForward, DEMP2_VELOCITY, 10000, ent );
+	gentity_t *missile = CreateMissile( start, dir, REPEATER_VELOCITY, 10000, ent );
 
-	missile->classname = "demp2_proj";
-	missile->s.weapon = WP_DEMP2;
+	missile->classname = "repeater_proj";
+	missile->s.weapon = WP_REPEATER;
 
 	// Do the damages
 	if ( ent->s.number != 0 )
 	{
 		if ( g_spskill->integer == 0 )
 		{
-			damage = DEMP2_NPC_DAMAGE_EASY;
+			damage = REPEATER_NPC_DAMAGE_EASY;
 		}
 		else if ( g_spskill->integer == 1 )
 		{
-			damage = DEMP2_NPC_DAMAGE_NORMAL;
+			damage = REPEATER_NPC_DAMAGE_NORMAL;
 		}
 		else
 		{
-			damage = DEMP2_NPC_DAMAGE_HARD;
+			damage = REPEATER_NPC_DAMAGE_HARD;
 		}
 	}
 
-	VectorSet( missile->maxs, DEMP2_SIZE, DEMP2_SIZE, DEMP2_SIZE );
-	VectorScale( missile->maxs, -1, missile->mins );
-
-//	if ( ent->client && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > 0 && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > cg.time )
-//	{
-//		// in overcharge mode, so doing double damage
-//		missile->flags |= FL_OVERCHARGED;
-//		damage *= 2;
-//	}
-
 	missile->damage = damage;
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-	missile->methodOfDeath = MOD_DEMP2;
+	missile->methodOfDeath = MOD_REPEATER;
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
 
-	// we don't want it to ever bounce
-	missile->bounceCount = 0;
+	// we don't want it to bounce forever
+	missile->bounceCount = 8;
 }
+
 
 // NOTE: this is 100% for the demp2 alt-fire effect, so changes to the visual effect will affect game side demp2 code
 //--------------------------------------------------
@@ -1513,7 +1285,7 @@ static void WP_DEMP2_AltFire( gentity_t *ent )
 
 	// the shot can travel a whopping 4096 units in 1 second. Note that the shot will auto-detonate at 4096 units...we'll see if this looks cool or not
 
-	gentity_t *missile = CreateMissile( start, wpForward, DEMP2_ALT_RANGE, 1000, ent, qtrue );
+	gentity_t *missile = CreateMissile( start, wpForward, DEMP2_ALT_RANGE, 1000, ent );
 
 	// letting it know what the charge size is.
 	missile->count = count;
@@ -1537,92 +1309,56 @@ static void WP_DEMP2_AltFire( gentity_t *ent )
 	missile->bounceCount = 0;
 }
 
-//---------------------------------------------------------
-static void WP_FireDEMP2( gentity_t *ent, qboolean alt_fire )
-//---------------------------------------------------------
+
+//-----//
+//DEMP2//
+//-----//
+static void WP_FireDEMP2( gentity_t *ent )
 {
-	if ( alt_fire )
+	vec3_t	start;
+	int		damage	= DEMP2_DAMAGE;
+
+	VectorCopy( wpMuzzle, start );
+	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
+
+	gentity_t *missile = CreateMissile( start, wpForward, DEMP2_VELOCITY, 10000, ent );
+
+	missile->classname = "demp2_proj";
+	missile->s.weapon = WP_DEMP2;
+
+	// Do the damages
+	if ( ent->s.number != 0 )
 	{
-		WP_DEMP2_AltFire( ent );
+		if ( g_spskill->integer == 0 )
+		{
+			damage = DEMP2_NPC_DAMAGE_EASY;
+		}
+		else if ( g_spskill->integer == 1 )
+		{
+			damage = DEMP2_NPC_DAMAGE_NORMAL;
+		}
+		else
+		{
+			damage = DEMP2_NPC_DAMAGE_HARD;
+		}
 	}
-	else
-	{
-		WP_DEMP2_MainFire( ent );
-	}
+
+	VectorSet( missile->maxs, DEMP2_SIZE, DEMP2_SIZE, DEMP2_SIZE );
+	VectorScale( missile->maxs, -1, missile->mins );
+
+	missile->damage = damage;
+	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
+	missile->methodOfDeath = MOD_DEMP2;
+	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
+
+	// we don't want it to ever bounce
+	missile->bounceCount = 0;
 }
 
 
 //-----------------------
 //	Golan Arms Flechette
 //-----------------------
-
-//---------------------------------------------------------
-static void WP_FlechetteMainFire( gentity_t *ent )
-//---------------------------------------------------------
-{
-	vec3_t		fwd, angs, start;
-	gentity_t	*missile;
-	float		damage = FLECHETTE_DAMAGE, vel = FLECHETTE_VEL;
-
-	VectorCopy( wpMuzzle, start );
-	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
-
-	// If we aren't the player, we will cut the velocity and damage of the shots
-	if ( ent->s.number )
-	{
-		damage *= 0.75f;
-		vel *= 0.5f;
-	}
-
-//	if ( ent->client && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > 0 && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > cg.time )
-//	{
-//		// in overcharge mode, so doing double damage
-//		damage *= 2;
-//	}
-
-	for ( int i = 0; i < FLECHETTE_SHOTS; i++ )
-	{
-		vectoangles( wpForward, angs );
-
-		if ( i == 0 && ent->s.number == 0 )
-		{
-			// do nothing on the first shot for the player, this one will hit the crosshairs
-		}
-		else
-		{
-			angs[PITCH] += crandom() * FLECHETTE_SPREAD;
-			angs[YAW]	+= crandom() * FLECHETTE_SPREAD;
-		}
-
-		AngleVectors( angs, fwd, NULL, NULL );
-
-		missile = CreateMissile( start, fwd, vel, 10000, ent );
-
-		missile->classname = "flech_proj";
-		missile->s.weapon = WP_FLECHETTE;
-
-		VectorSet( missile->maxs, FLECHETTE_SIZE, FLECHETTE_SIZE, FLECHETTE_SIZE );
-		VectorScale( missile->maxs, -1, missile->mins );
-
-		missile->damage = damage;
-
-//		if ( ent->client && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > 0 && ent->client->ps.powerups[PW_WEAPON_OVERCHARGE] > cg.time )
-//		{
-//			missile->flags |= FL_OVERCHARGED;
-//		}
-			
-		missile->dflags = (DAMAGE_DEATH_KNOCKBACK|DAMAGE_EXTRA_KNOCKBACK);
-		
-		missile->methodOfDeath = MOD_FLECHETTE;
-		missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-
-		// we don't want it to bounce forever
-		missile->bounceCount = Q_irand(1,2);
-
-		missile->s.eFlags |= EF_BOUNCE_SHRAPNEL;
-		ent->client->sess.missionStats.shotsFired++;
-	}
-}
 
 //---------------------------------------------------------
 void prox_mine_think( gentity_t *ent )
@@ -1741,7 +1477,7 @@ void WP_flechette_alt_blow( gentity_t *ent )
 static void WP_CreateFlechetteBouncyThing( vec3_t start, vec3_t fwd, gentity_t *self )
 //------------------------------------------------------------------------------
 {
-	gentity_t	*missile = CreateMissile( start, fwd, 950 + random() * 700, 1500 + random() * 2000, self, qtrue );
+	gentity_t	*missile = CreateMissile( start, fwd, 950 + random() * 700, 1500 + random() * 2000, self );
 	
 	missile->e_ThinkFunc = thinkF_WP_flechette_alt_blow;
 
@@ -1797,17 +1533,61 @@ static void WP_FlechetteAltFire( gentity_t *self )
 	}
 }
 
-//---------------------------------------------------------
-static void WP_FireFlechette( gentity_t *ent, qboolean alt_fire )
-//---------------------------------------------------------
+//-----------//
+//Flak Cannon//
+//-----------//
+static void WP_FireFlechette( gentity_t *ent )
 {
-	if ( alt_fire )
+	vec3_t		fwd, angs, start;
+	gentity_t	*missile;
+	float		damage = FLECHETTE_DAMAGE, vel = FLECHETTE_VEL;
+
+	VectorCopy( wpMuzzle, start );
+	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
+
+	// If we aren't the player, we will cut the velocity and damage of the shots
+	if ( ent->s.number )
 	{
-		WP_FlechetteAltFire( ent );
+		damage *= 0.75f;
+		vel *= 0.5f;
 	}
-	else
+
+	for ( int i = 0; i < FLECHETTE_SHOTS; i++ )
 	{
-		WP_FlechetteMainFire( ent );
+		vectoangles( wpForward, angs );
+
+		if ( i == 0 && ent->s.number == 0 )
+		{
+			// do nothing on the first shot for the player, this one will hit the crosshairs
+		}
+		else
+		{
+			angs[PITCH] += crandom() * FLECHETTE_SPREAD;
+			angs[YAW]	+= crandom() * FLECHETTE_SPREAD;
+		}
+
+		AngleVectors( angs, fwd, NULL, NULL );
+
+		missile = CreateMissile( start, fwd, vel, 10000, ent );
+
+		missile->classname = "flech_proj";
+		missile->s.weapon = WP_FLECHETTE;
+
+		VectorSet( missile->maxs, FLECHETTE_SIZE, FLECHETTE_SIZE, FLECHETTE_SIZE );
+		VectorScale( missile->maxs, -1, missile->mins );
+
+		missile->damage = damage;
+
+		missile->dflags = (DAMAGE_DEATH_KNOCKBACK|DAMAGE_EXTRA_KNOCKBACK);
+		
+		missile->methodOfDeath = MOD_FLECHETTE;
+		missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
+
+		// we don't want it to bounce forever
+		missile->bounceCount = Q_irand(1,2);
+
+		missile->s.eFlags |= EF_BOUNCE_SHRAPNEL;
+		ent->client->sess.missionStats.shotsFired++;
 	}
 }
 
@@ -1921,22 +1701,17 @@ void rocketThink( gentity_t *ent )
 }
 
 //---------------------------------------------------------
-static void WP_FireRocket( gentity_t *ent, qboolean alt_fire )
+static void WP_FireRocket( gentity_t *ent )
 //---------------------------------------------------------
 {
 	vec3_t	start;
 	int		damage	= ROCKET_DAMAGE;
 	float	vel = ROCKET_VELOCITY;
 
-	if ( alt_fire )
-	{
-		vel *= 0.5f;
-	}
-
 	VectorCopy( wpMuzzle, start );
 	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
 
-	gentity_t *missile = CreateMissile( start, wpForward, vel, 10000, ent, alt_fire );
+	gentity_t *missile = CreateMissile( start, wpForward, vel, 10000, ent );
 
 	missile->classname = "rocket_proj";
 	missile->s.weapon = WP_ROCKET_LAUNCHER;
@@ -1959,63 +1734,6 @@ static void WP_FireRocket( gentity_t *ent, qboolean alt_fire )
 		}
 	}
 
-	if ( alt_fire )
-	{
-		int	lockEntNum, lockTime;
-		if ( ent->NPC && ent->enemy )
-		{
-			lockEntNum = ent->enemy->s.number;
-			lockTime = Q_irand( 600, 1200 );
-		}
-		else
-		{
-			lockEntNum = g_rocketLockEntNum;
-			lockTime = g_rocketLockTime;
-		}
-		// we'll consider attempting to lock this little poochie onto some baddie.
-		if ( (lockEntNum > 0||ent->NPC&&lockEntNum>=0) && lockEntNum < ENTITYNUM_WORLD && lockTime > 0 )
-		{
-			// take our current lock time and divide that by 8 wedge slices to get the current lock amount
-			int dif = ( level.time - lockTime ) / ( 1200.0f / 8.0f );
-
-			if ( dif < 0 )
-			{
-				dif = 0;
-			}
-			else if ( dif > 8 )
-			{
-				dif = 8;
-			}
-
-			// if we are fully locked, always take on the enemy.  
-			//	Also give a slight advantage to higher, but not quite full charges.  
-			//	Finally, just give any amount of charge a very slight random chance of locking.
-			if ( dif == 8 || random() * dif > 2 || random() > 0.97f )
-			{
-				missile->enemy = &g_entities[lockEntNum];
-
-				if ( missile->enemy && missile->enemy->inuse )//&& DistanceSquared( missile->currentOrigin, missile->enemy->currentOrigin ) < 262144 && InFOV( missile->currentOrigin, missile->enemy->currentOrigin, missile->enemy->client->ps.viewangles, 45, 45 ) )
-				{
-					vec3_t dir, dir2;
-
-					AngleVectors( missile->enemy->currentAngles, dir, NULL, NULL );
-					AngleVectors( ent->client->renderInfo.eyeAngles, dir2, NULL, NULL );
-
-					if ( DotProduct( dir, dir2 ) < 0.0f )
-					{
-						G_StartFlee( missile->enemy, ent, missile->enemy->currentOrigin, AEL_DANGER_GREAT, 3000, 5000 );
-					}
-				}
-			}
-		}
-
-		VectorCopy( wpForward, missile->movedir );
-
-		missile->e_ThinkFunc = thinkF_rocketThink;
-		missile->random = 1.0f;
-		missile->nextthink = level.time + ROCKET_ALT_THINK_TIME;
-	}
-
 	// Make it easier to hit things
 	VectorSet( missile->maxs, ROCKET_SIZE, ROCKET_SIZE, ROCKET_SIZE );
 	VectorScale( missile->maxs, -1, missile->mins );
@@ -2023,16 +1741,8 @@ static void WP_FireRocket( gentity_t *ent, qboolean alt_fire )
 	missile->damage = damage;
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 
-	if ( alt_fire )
-	{
-		missile->methodOfDeath = MOD_ROCKET_ALT;
-		missile->splashMethodOfDeath = MOD_ROCKET_ALT;// ?SPLASH;
-	}
-	else
-	{
-		missile->methodOfDeath = MOD_ROCKET;
-		missile->splashMethodOfDeath = MOD_ROCKET;// ?SPLASH;
-	}
+	missile->methodOfDeath = MOD_ROCKET;
+	missile->splashMethodOfDeath = MOD_ROCKET;// ?SPLASH;
 
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
 	missile->splashDamage = ROCKET_SPLASH_DAMAGE;
@@ -2087,7 +1797,7 @@ static void WP_DropDetPack( gentity_t *self, vec3_t start, vec3_t dir )
 	VectorCopy( wpMuzzle, start );
 	WP_TraceSetStart( self, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
 
-	gentity_t	*missile = CreateMissile( start, wpForward, 300, 10000, self, qfalse );
+	gentity_t	*missile = CreateMissile( start, wpForward, 300, 10000, self );
 
 	missile->fxID = G_EffectIndex( "detpack/explosion" ); // if we set an explosion effect, explode death can use that instead
 
@@ -2160,7 +1870,6 @@ static void WP_FireDetPack( gentity_t *ent, qboolean alt_fire )
 		ent->client->ps.eFlags |= EF_PLANTED_CHARGE;
 	}
 }
-
 
 //-----------------------
 //	Laser Trip Mine
@@ -2693,7 +2402,7 @@ void WP_ThermalThink( gentity_t *ent )
 }
 
 //---------------------------------------------------------
-gentity_t *WP_FireThermalDetonator( gentity_t *ent, qboolean alt_fire )
+gentity_t *WP_FireThermalDetonator( gentity_t *ent )
 //---------------------------------------------------------
 {
 	gentity_t	*bolt;
@@ -2713,18 +2422,10 @@ gentity_t *WP_FireThermalDetonator( gentity_t *ent, qboolean alt_fire )
 		damageScale = TD_NPC_DAMAGE_CUT;
 	}
 
-	if ( !alt_fire && ent->s.number == 0 )
-	{
-		// Main fires for the players do a little bit of extra thinking
-		bolt->e_ThinkFunc = thinkF_WP_ThermalThink;
-		bolt->nextthink = level.time + TD_THINK_TIME;
-		bolt->delay = level.time + TD_TIME; // How long 'til she blows
-	}
-	else
-	{
-		bolt->e_ThinkFunc = thinkF_thermalDetonatorExplode;
-		bolt->nextthink = level.time + TD_TIME; // How long 'til she blows
-	}
+	// Main fires for the players do a little bit of extra thinking
+	bolt->e_ThinkFunc = thinkF_WP_ThermalThink;
+	bolt->nextthink = level.time + TD_THINK_TIME;
+	bolt->delay = level.time + TD_TIME; // How long 'til she blows
 
 	bolt->mass = 10;
 
@@ -2789,14 +2490,7 @@ gentity_t *WP_FireThermalDetonator( gentity_t *ent, qboolean alt_fire )
 		}
 	}
 
-	if ( alt_fire )
-	{
-		bolt->alt_fire = qtrue;
-	}
-	else
-	{
-		bolt->s.eFlags |= EF_BOUNCE_HALF;
-	}
+	bolt->s.eFlags |= EF_BOUNCE_HALF;
 
 	bolt->s.loopSound = G_SoundIndex( "sound/weapons/thermal/thermloop.wav" );
 
@@ -2809,16 +2503,8 @@ gentity_t *WP_FireThermalDetonator( gentity_t *ent, qboolean alt_fire )
 	bolt->svFlags = SVF_USE_CURRENT_ORIGIN;
 	bolt->s.weapon = WP_THERMAL;
 
-	if ( alt_fire )
-	{
-		bolt->methodOfDeath = MOD_THERMAL_ALT;
-		bolt->splashMethodOfDeath = MOD_THERMAL_ALT;//? SPLASH;
-	}
-	else
-	{
-		bolt->methodOfDeath = MOD_THERMAL;
-		bolt->splashMethodOfDeath = MOD_THERMAL;//? SPLASH;
-	}
+	bolt->methodOfDeath = MOD_THERMAL;
+	bolt->splashMethodOfDeath = MOD_THERMAL;//? SPLASH;
 
 	bolt->s.pos.trTime = level.time;		// move a bit on the very first frame
 	VectorCopy( start, bolt->s.pos.trBase );
@@ -2837,7 +2523,7 @@ gentity_t *WP_DropThermal( gentity_t *ent )
 {
 	AngleVectors( ent->client->ps.viewangles, wpForward, wpVright, wpUp );
 	CalcEntitySpot( ent, SPOT_WEAPON, wpMuzzle );
-	return (WP_FireThermalDetonator( ent, qfalse ));
+	return (WP_FireThermalDetonator( ent ));
 }
 
 
@@ -2934,7 +2620,7 @@ void WP_ATSTSideAltFire( gentity_t *ent )
 		vel = ATST_SIDE_ALT_VELOCITY;
 	}
 
-	gentity_t *missile = CreateMissile( wpMuzzle, wpForward, vel, 10000, ent, qtrue );
+	gentity_t *missile = CreateMissile( wpMuzzle, wpForward, vel, 10000, ent );
 
 	missile->classname = "atst_rocket";
 	missile->s.weapon = WP_ATST_SIDE;
@@ -2985,7 +2671,7 @@ void WP_ATSTSideFire( gentity_t *ent )
 {
 	int	damage	= ATST_SIDE_MAIN_DAMAGE;
 
-	gentity_t *missile = CreateMissile( wpMuzzle, wpForward, ATST_SIDE_MAIN_VELOCITY, 10000, ent, qfalse );
+	gentity_t *missile = CreateMissile( wpMuzzle, wpForward, ATST_SIDE_MAIN_VELOCITY, 10000, ent );
 
 	missile->classname = "atst_side_proj";
 	missile->s.weapon = WP_ATST_SIDE;
@@ -3023,7 +2709,7 @@ void WP_ATSTSideFire( gentity_t *ent )
 }
 
 //---------------------------------------------------------
-void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
+void WP_FireStunBaton( gentity_t *ent )
 {
 	gentity_t	*tr_ent;
 	trace_t		tr;
@@ -3383,7 +3069,7 @@ void FireWeapon( gentity_t *ent, qboolean alt_fire )
 	ent->client->ps.persistant[PERS_ACCURACY_SHOTS]++;
 
 	// set aiming directions
-	if ( ent->s.weapon == WP_DISRUPTOR && alt_fire )
+	if ( ent->s.weapon == WP_DISRUPTOR )
 	{
 		if ( ent->NPC )
 		{
@@ -3495,40 +3181,40 @@ void FireWeapon( gentity_t *ent, qboolean alt_fire )
 		break;
 
 	case WP_BRYAR_PISTOL:
-		WP_FireBryarPistol( ent, alt_fire );
+		WP_FireBryarPistol( ent );
 		break;
 
 	case WP_BLASTER:
-		WP_FireBlaster( ent, alt_fire );
+		WP_FireBlaster( ent );
 		break;
 
 	case WP_DISRUPTOR:
 		alert = 50; // if you want it to alert enemies, remove this
-		WP_FireDisruptor( ent, alt_fire );
+		WP_FireDisruptor( ent );
 		break;
 
 	case WP_BOWCASTER:
-		WP_FireBowcaster( ent, alt_fire );
+		WP_FireBowcaster( ent );
 		break;
 
 	case WP_REPEATER:
-		WP_FireRepeater( ent, alt_fire );
+		WP_FireRepeater( ent );
 		break;
 
 	case WP_DEMP2:
-		WP_FireDEMP2( ent, alt_fire );
+		WP_FireDEMP2( ent );
 		break;
 
 	case WP_FLECHETTE:
-		WP_FireFlechette( ent, alt_fire );
+		WP_FireFlechette( ent );
 		break;
 
 	case WP_ROCKET_LAUNCHER:
-		WP_FireRocket( ent, alt_fire );
+		WP_FireRocket( ent );
 		break;
 
 	case WP_THERMAL:
-		WP_FireThermalDetonator( ent, alt_fire );
+		WP_FireThermalDetonator( ent );
 		break;
 
 	case WP_TRIP_MINE:
@@ -3586,28 +3272,16 @@ void FireWeapon( gentity_t *ent, qboolean alt_fire )
 		break;
 
 	case WP_RAPID_FIRE_CONC:
-		// TEMP
-		if ( alt_fire )
-		{
-			WP_FireRepeater( ent, alt_fire );	
-		}
-		else
-		{
-			WP_EmplacedFire( ent );
-		}
+		WP_EmplacedFire( ent );
 		break;
 
 	case WP_STUN_BATON:
-		WP_FireStunBaton( ent, alt_fire );
+		WP_FireStunBaton( ent );
 		break;
 
 	case WP_BLASTER_PISTOL: // enemy version
-		WP_FireBryarPistol( ent, qfalse ); // never an alt-fire?
+		WP_FireBryarPistol( ent ); // never an alt-fire?
 		break;
-
-//	case WP_TRICORDER:
-//		WP_TricorderScan( ent, alt_fire );
-//		break;
 
 	default:
 		return;
@@ -3998,7 +3672,7 @@ void SP_emplaced_gun( gentity_t *ent )
 
 //Corto
 //Function to calculate the spread angles depending on the player movement or stance
-static void CalculateSpreads (gentity_t *ent, float main_spread, float alternative_spread)
+void CalculateSpreads (gentity_t *ent, float main_spread, float alternative_spread)
 {
 	//If player is ducking
 	if ( ent->client->usercmd.upmove < 0 && ent->client->ps.groundEntityNum != ENTITYNUM_NONE)

@@ -27,6 +27,7 @@ This file is part of Jedi Knight 2.
 #include "bg_local.h"			   
 #include "g_functions.h"
 #include "wp_saber.h"
+#include "..\cgame\cg_headers.h"
 
 #define MAX_SABER_VICTIMS 16
 static int		victimEntityNum[MAX_SABER_VICTIMS];
