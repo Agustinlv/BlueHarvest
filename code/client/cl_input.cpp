@@ -55,7 +55,7 @@ kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
 kbutton_t	in_strafe, in_speed;
 kbutton_t	in_up, in_down;
 
-kbutton_t	in_buttons[11];
+kbutton_t	in_buttons[12];
 
 
 qboolean	in_mlooking;
@@ -239,6 +239,8 @@ void IN_Button8Down(void) {IN_KeyDown(&in_buttons[8]);}
 void IN_Button8Up(void) {IN_KeyUp(&in_buttons[8]);}
 void IN_Button9Down(void) {IN_KeyDown(&in_buttons[9]);}
 void IN_Button9Up(void) {IN_KeyUp(&in_buttons[9]);}
+void IN_Button10Down(void) {IN_KeyDown(&in_buttons[10]);}
+void IN_Button10Up(void) {IN_KeyUp(&in_buttons[10]);}
 
 void IN_ButtonDown (void) {
 	IN_KeyDown(&in_buttons[1]);}
@@ -496,7 +498,7 @@ void CL_CmdButtons( usercmd_t *cmd ) {
 	// send a button bit even if the key was pressed and released in
 	// less than a frame
 	//	
-	for (i = 0 ; i < 12 ; i++) {
+	for (i = 0 ; i < 13 ; i++) {
 		if ( in_buttons[i].active || in_buttons[i].wasPressed ) {
 			cmd->buttons |= 1 << i;
 		}
@@ -854,6 +856,8 @@ void CL_InitInput( void ) {
 	Cmd_AddCommand ("-leanleft", IN_Button8Up);
 	Cmd_AddCommand ("+leanright", IN_Button9Down);//lean right
 	Cmd_AddCommand ("-leanright", IN_Button9Up);
+	Cmd_AddCommand ("+throwgrenade", IN_Button10Down);//throw grenade
+	Cmd_AddCommand ("-throwgrenade", IN_Button10Up);
 
 	//generic button commands
 	Cmd_AddCommand ("+button0", IN_Button0Down);//attack
@@ -876,6 +880,8 @@ void CL_InitInput( void ) {
 	Cmd_AddCommand ("-button8", IN_Button8Up);
 	Cmd_AddCommand ("+button9", IN_Button9Down);//lean right
 	Cmd_AddCommand ("-button9", IN_Button9Up);
+	Cmd_AddCommand ("+button10", IN_Button10Down);//throw grenade
+	Cmd_AddCommand ("-button10", IN_Button10Up);
 	//end buttons
 	Cmd_AddCommand ("+mlook", IN_MLookDown);
 	Cmd_AddCommand ("-mlook", IN_MLookUp);

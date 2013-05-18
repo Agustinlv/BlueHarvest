@@ -1283,13 +1283,6 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 				gi.Printf( "DOUBLE EV_FIRE_WEAPON AND-OR EV_ALT_FIRE!!\n" );
 			}
 #endif
-			//Corto
-			//If playing is sprinting it can't shoot or jumping (which is not the same as "in air"), just sprint
-			if ((ent->client->usercmd.forwardmove > 64 && cg.zoomMode == 0) || ent->client->usercmd.upmove > 0)
-			{
-				fired = qfalse;
-				break;
-			}
 			fired = qtrue;
 			FireWeapon( ent, qfalse );
 			break;
@@ -1300,17 +1293,9 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 				gi.Printf( "DOUBLE EV_FIRE_WEAPON AND-OR EV_ALT_FIRE!!\n" );
 			}
 #endif
-			//Corto
-			//If playing is sprinting it can't shoot or jumping (which is not the same as "in air"), just sprint
-			if ((ent->client->usercmd.forwardmove > 64 && cg.zoomMode == 0) || ent->client->usercmd.upmove > 0)
-			{
-				fired = qfalse;
-				break;
-			}
 			fired = qtrue;
 			FireWeapon( ent, qtrue );
 			break;
-
 		default:
 			break;
 		}
@@ -2161,20 +2146,12 @@ extern cvar_t	*g_skippingcin;
 		if ( (cg.zoomMode == 2))
 		{
 			//Any kind of movement when the player is NOT ducked when the disruptor gun is zoomed will cause us to auto-magically un-zoom
-			if ( /*( (ucmd->forwardmove||ucmd->rightmove) 
-				   && ucmd->upmove >= 0 //crouching-moving is ok
-				   && !(ucmd->buttons&BUTTON_USE)//leaning is ok
-				 ) 
-				 || */ cg.snap->ps.weapon == WP_DISRUPTOR && ucmd->upmove > 0 //jumping not allowed
-			   )
-			{
+			if ( (cg.snap->ps.weapon == WP_DISRUPTOR || cg.snap->ps.weapon == WP_ROCKET_LAUNCHER) && ucmd->upmove > 0 ) {
 				// already zooming, so must be wanting to turn it off
 				G_Sound( ent, G_SoundIndex( "sound/weapons/disruptor/zoomend.wav" ));
 				cg.zoomMode = 0;
 				cg.zoomTime = cg.time;
 				cg.zoomLocked = qfalse;
-				cg_gun_z.value = 0;
-				cg_gun_y.value = 0;
 			}
 		}
 

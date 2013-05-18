@@ -3059,10 +3059,8 @@ void CalcMuzzlePoint( gentity_t *const ent, vec3_t forward, vec3_t right, vec3_t
 	AddLeanOfs(ent, muzzlePoint);
 }
 
-//---------------------------------------------------------
-void FireWeapon( gentity_t *ent, qboolean alt_fire ) 
-//---------------------------------------------------------
-{
+
+void FireWeapon( gentity_t *ent, qboolean alt_fire ) {
 	float alert = 256;
 
 	// track shots taken for accuracy tracking. 

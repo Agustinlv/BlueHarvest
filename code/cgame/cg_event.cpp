@@ -523,25 +523,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		break;
 
 	case EV_FIRE_WEAPON:
-		//Corto
-		//If playing is sprinting it can't shoot or jumping (which is not the same as "in air"), just sprint
-		if ((cent->gent->client->usercmd.forwardmove > 64 && cg.zoomMode == 0) || cent->gent->client->usercmd.upmove > 0)
-		{
-			break;
-		}
 		DEBUGNAME("EV_FIRE_WEAPON");
 		CG_FireWeapon( cent, qfalse );
 		break;
 
-	//Corto
-	//Removing completely the alternative
 	case EV_ALT_FIRE:
-		//Corto
-		//If playing is sprinting it can't shoot or jumping (which is not the same as "in air"), just sprint
-		if ((cent->gent->client->usercmd.forwardmove > 64 && cg.zoomMode == 0) || cent->gent->client->usercmd.upmove > 0)
-		{
-			break;
-		}
 		DEBUGNAME("EV_ALT_FIRE");
 		CG_FireWeapon( cent, qtrue );
 		break;

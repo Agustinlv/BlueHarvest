@@ -2913,8 +2913,7 @@ extern float cg_zoomFov;
 void setZoomGunOffset (int weaponNumber)
 {
 	float actualFOV = (cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
-	switch (weaponNumber)
-	{
+	switch (weaponNumber) {
 	case WP_BRYAR_PISTOL:
 		cg_zoomFov = actualFOV - 10.0;
 		cg_gun_z.value = 3;

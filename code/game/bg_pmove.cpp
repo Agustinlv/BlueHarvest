@@ -7831,7 +7831,7 @@ static void PM_Weapon( void )
 	{
 		return;
 	}
-	
+
 	if (pm->ps->weapon == WP_SABER && (cg.zoomMode==3||!cg.zoomMode||pm->ps->clientNum) )		// WP_LIGHTSABER
 	{	// Separate logic for lightsaber, but not for player when zoomed
 		PM_WeaponLightsaber();
@@ -7866,22 +7866,9 @@ static void PM_Weapon( void )
 	if(pm->gent && pm->gent->client && pm->gent->client->fireDelay > 0)
 	{//FIXME: this is going to fire off one frame before you expect, actually
 		pm->gent->client->fireDelay -= pml.msec;
-		if(pm->gent->client->fireDelay <= 0)
-		{//just finished delay timer
-			if ( pm->ps->clientNum && pm->ps->weapon == WP_ROCKET_LAUNCHER )
-			{
-				G_SoundOnEnt( pm->gent, CHAN_WEAPON, "sound/weapons/rocket/lock.wav" );
-				pm->cmd.buttons |= BUTTON_ALT_ATTACK;
-			}
+		if(pm->gent->client->fireDelay <= 0) {//just finished delay timer
 			pm->gent->client->fireDelay = 0;
 			delayed_fire = qtrue;
-		}
-		else
-		{
-			if ( pm->ps->clientNum && pm->ps->weapon == WP_ROCKET_LAUNCHER && Q_irand( 0, 1 ) )
-			{
-				G_SoundOnEnt( pm->gent, CHAN_WEAPON, "sound/weapons/rocket/tick.wav" );
-			}
 		}
 	}
 
@@ -7972,34 +7959,28 @@ static void PM_Weapon( void )
 
 	if(!delayed_fire)
 	{
-		// check for fire
-		if ( !(pm->cmd.buttons & BUTTON_ATTACK) && !(pm->cmd.buttons & (BUTTON_ATTACK|BUTTON_ALT_ATTACK) && (pm->ps->weapon == WP_DET_PACK || pm->ps->weapon == WP_TRIP_MINE))) // && (pm->ps->weapon == WP_DET_PACK || pm->ps->weapon == WP_TRIP_MINE))) )
-		{
+		//Corto
+		//Checking for fire got a little more complicated. If you selected trip mines or det pack (which still have alt fire) you have to check you are not pressing ALT ATTACK
+		if ( !(pm->cmd.buttons & BUTTON_THROW_GRENADE && (pm->ps->ammo[weaponData[WP_THERMAL].ammoIndex] - 1) >= 0 && (pm->ps->weapon != WP_DET_PACK && pm->ps->weapon != WP_TRIP_MINE)
+			&& !(cg.zoomMode == 2 && (pm->ps->weapon == WP_DISRUPTOR || pm->ps->weapon == WP_ROCKET_LAUNCHER)))
+			&& !(pm->cmd.buttons & BUTTON_ATTACK)
+			&& !(pm->cmd.buttons & (BUTTON_ATTACK|BUTTON_ALT_ATTACK) && (pm->ps->weapon == WP_DET_PACK || pm->ps->weapon == WP_TRIP_MINE)) ) {
+			
 			pm->ps->weaponTime = 0;
 		
-			if ( pm->gent && pm->gent->client && pm->gent->client->fireDelay > 0 )
-			{//Still firing
+			if ( pm->gent && pm->gent->client && pm->gent->client->fireDelay > 0 ) {//Still firing
 				pm->ps->weaponstate = WEAPON_FIRING;
-			}
-			else if ( pm->ps->weaponstate != WEAPON_READY )
-			{
-				if ( !pm->gent || !pm->gent->NPC || pm->gent->attackDebounceTime < level.time )
-				{
+			} else if ( pm->ps->weaponstate != WEAPON_READY ) {
+				if ( !pm->gent || !pm->gent->NPC || pm->gent->attackDebounceTime < level.time ) {
 					pm->ps->weaponstate = WEAPON_IDLE;
 				}
 			}
-			
 			return;
 		}
 		
 		// start the animation even if out of ammo
-		switch(pm->ps->weapon)
-		{
-/*
-		case WP_SABER://1 - handed
-			PM_SetAnim(pm,SETANIM_TORSO,BOTH_ATTACK1,SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_RESTART|SETANIM_FLAG_HOLD);
-			break;
-*/		
+		switch(pm->ps->weapon) {
+
 		case WP_BRYAR_PISTOL://1-handed
 		case WP_BLASTER_PISTOL://1-handed
 			PM_SetAnim(pm,SETANIM_TORSO,BOTH_ATTACK2,SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_RESTART|SETANIM_FLAG_HOLD);
@@ -8130,18 +8111,27 @@ static void PM_Weapon( void )
 		trueCount = PM_DoChargingAmmoUsage( &amount );
 	}
 
+	//I don't why or how, but I put this in here and automatically changes to grenades, throws one and goes back to the previous selected weapon
+	//GENIUS!
+	if ( pm->cmd.buttons & BUTTON_THROW_GRENADE ) {
+			pm->ps->weapon = WP_THERMAL;
+	}
+		
 	pm->ps->weaponstate = WEAPON_FIRING;
+
+	//Corto
+	//The rocket launcher cannot be activated unless you are aiming thru the visor
+	if (pm->ps->weapon == WP_ROCKET_LAUNCHER && !(cg.zoomMode == 2)) {
+		return;
+	}
 
 	// take an ammo away if not infinite
 	if ( pm->ps->ammo[ weaponData[pm->ps->weapon].ammoIndex ] != -1 )
 	{
-		// enough energy to fire this weapon?
-		if ((pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex] - amount) >= 0) 
-		{
+		// Check ammo if the weapon can be activated
+		if ((pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex] - amount) >= 0) {
 			pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex] -= amount;
-		}
-		else	// Not enough energy
-		{
+		} else { // No enough ammo
 			if ( !( pm->ps->eFlags & EF_LOCKED_TO_WEAPON ))
 			{
 				// Switch weapons
@@ -8188,7 +8178,6 @@ static void PM_Weapon( void )
 		}
 	}
 
-
 	if(pm->gent && pm->gent->NPC != NULL )
 	{//NPCs have their own refire logic
 		return;
@@ -8219,7 +8208,7 @@ static void PM_Weapon( void )
 	// HACK!!!!!
 	if ( pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex] <= 0 )
 	{
-		if ( pm->ps->weapon == WP_THERMAL || pm->ps->weapon == WP_TRIP_MINE )
+		if ( pm->ps->weapon == WP_TRIP_MINE )
 		{
 			// because these weapons have the ammo attached to the hand, we should switch weapons when the last one is thrown, otherwise it will look silly
 			//	NOTE: could also switch to an empty had version, but was told we aren't getting any new models at this point
@@ -8413,7 +8402,7 @@ void PM_AdjustAttackStates( pmove_t *pm )
 //-------------------------------------------
 {
 	int amount;
-
+	
 	// get ammo usage
 	amount = pm->ps->ammo[weaponData[ pm->ps->weapon ].ammoIndex] - weaponData[pm->ps->weapon].energyPerShot;
 
@@ -8427,12 +8416,10 @@ void PM_AdjustAttackStates( pmove_t *pm )
 		}
 	}
 	//we are not alt-firing yet, but the alt-attack button was just pressed
-	if ( pm->ps->weapon != WP_DET_PACK && pm->ps->weapon != WP_TRIP_MINE && pm->ps->weapon != WP_STUN_BATON ) { //I don't want to get in here if I'm selecting the det packs, mines or stun baton
-		if ( ((pm->cmd.buttons & BUTTON_ALT_ATTACK && pm->ps->weapon != WP_DISRUPTOR) || (pm->cmd.buttons & BUTTON_ALT_ATTACK && pm->ps->weapon == WP_DISRUPTOR && pm->ps->groundEntityNum != ENTITYNUM_NONE && pm->cmd.upmove <= 0)) && pm->gent && pm->gent->s.number == 0 && pm->ps->weaponstate != WEAPON_DROPPING)
-		{
+	if ( pm->ps->weapon != WP_DET_PACK && pm->ps->weapon != WP_TRIP_MINE && pm->ps->weapon != WP_STUN_BATON && pm->gent && pm->gent->s.number == 0 && pm->ps->weaponstate != WEAPON_DROPPING ) { //I don't want to get in here if I'm selecting the det packs, mines or stun baton
+		if ( (pm->cmd.buttons & BUTTON_ALT_ATTACK && pm->ps->weapon != WP_DISRUPTOR) || (pm->cmd.buttons & BUTTON_ALT_ATTACK && pm->ps->weapon == WP_DISRUPTOR && pm->ps->groundEntityNum != ENTITYNUM_NONE && pm->cmd.upmove <= 0) ) {
 			// We just pressed the alt-fire key
-			if ( cg.zoomMode == 0 )
-			{
+			if ( cg.zoomMode == 0 ) {
 				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomstart.wav" );
 				if ( cg.renderingThirdPerson ) {
 					cg_thirdPersonRange.value = 20;
@@ -8440,7 +8427,7 @@ void PM_AdjustAttackStates( pmove_t *pm )
 				cg.zoomMode = 2;
 				cg.zoomTime = cg.time;
 				cg.zoomLocked = qtrue;
-				setZoomGunOffset ( pm->ps->weapon );
+				setZoomGunOffset (pm->ps->weapon);
 			}
 		} else if ( !(pm->cmd.buttons & BUTTON_ALT_ATTACK )) { //Releasing the alt fire button releases the zoom.
 			// Not pressing zoom any more
@@ -8451,7 +8438,7 @@ void PM_AdjustAttackStates( pmove_t *pm )
 				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomend.wav" );
 				cg.zoomMode = 0;
 				cg.zoomTime = cg.time;
-				cg.zoomLocked = qfalse;
+				cg.zoomLocked = qtrue;
 				setCustomGunOffset ( pm->ps->weapon );
 			}
 		}
@@ -8742,6 +8729,7 @@ void Pmove( pmove_t *pmove )
 
 	// weapons
 	PM_Weapon();
+	//PM_ThrowGrenade();
 	if ( pm->cmd.buttons & BUTTON_ATTACK )
 	{
 		pm->ps->pm_flags |= PMF_ATTACK_HELD;

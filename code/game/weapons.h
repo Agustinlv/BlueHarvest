@@ -64,15 +64,6 @@ typedef enum //# weapon_e
 
 	WP_BLASTER_PISTOL,	// apparently some enemy only version of the blaster
 
-//	WP_CHAOTICA_GUARD_GUN,	//			- B/W version of scav rifle for Chaotica's guards.
-//	WP_BOT_ROCKET,		// Hunter Seeker - Rocket projectile
-//	WP_KLINGON_BLADE,
-//	WP_IMPERIAL_BLADE,
-
-//	WP_DESPERADO,			// special holo-weapon
-//	WP_PALADIN,			// special holo-weapon
-
-	//# #eol
 	WP_NUM_WEAPONS
 } weapon_t;
 
