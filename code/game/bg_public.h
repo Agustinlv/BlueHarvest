@@ -26,7 +26,7 @@ This file is part of Jedi Knight 2.
 
 #define	DEFAULT_GRAVITY		800
 #define	GIB_HEALTH			-40
-#define	ARMOR_PROTECTION	0.40
+#define	ARMOR_PROTECTION	0.50
 
 #define	MAX_ITEMS			256
 

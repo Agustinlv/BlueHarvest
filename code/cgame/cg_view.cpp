@@ -36,6 +36,8 @@ float cg_zoomFov;
 //#define CG_CAM_ABOVE	2
 extern qboolean CG_OnMovingPlat( playerState_t *ps );
 
+extern void resetGunOffset ( int weaponNum );
+
 /*
 =============================================================================
 
@@ -1321,6 +1323,7 @@ Fixed fov at intermissions, otherwise account for fov variable and zooms.
 static qboolean	CG_CalcFov( void ) {
 	float	fov_x;
 	float	f;
+	int weaponNum = cg.snap->ps.weapon;
 
 	if ( cg.predicted_player_state.pm_type == PM_INTERMISSION ) {
 		// if in intermission, use a fixed value
@@ -1358,7 +1361,7 @@ static qboolean	CG_CalcFov( void ) {
 			}
 		}
 	} 
-	else if ( (!cg.zoomMode || cg.zoomMode > 2) && (cg.snap->ps.forcePowersActive&(1<<FP_SPEED)) && cg.snap->ps.forcePowerDuration[FP_SPEED] )
+	else if ( (!cg.zoomMode || cg.zoomMode > 2) && (cg.snap->ps.forcePowersActive&(1<<FP_SPEED)) && cg.snap->ps.forcePowerDuration[FP_SPEED] )//cg.renderingThirdPerson && 
 	{
 		fov_x = CG_ForceSpeedFOV();
 	} else {
@@ -1378,7 +1381,7 @@ static qboolean	CG_CalcFov( void ) {
 		}
 
 		// Disable zooming when in third person
-		if ( cg.zoomMode && cg.zoomMode < 3  && !cg.renderingThirdPerson ) // light amp goggles do none of the zoom silliness
+		if ( cg.zoomMode && cg.zoomMode < 3 && !cg.renderingThirdPerson ) // light amp goggles do none of the zoom silliness
 		{
 			if ( !cg.zoomLocked )
 			{
@@ -1427,7 +1430,35 @@ static qboolean	CG_CalcFov( void ) {
 				}
 			}
 
-			fov_x = cg_zoomFov;
+			if ( cg_gun_x.value < weaponData[weaponNum].zoomedX || cg_gun_y.value < weaponData[weaponNum].zoomedY || cg_gun_z.value < weaponData[weaponNum].zoomedZ ) {
+				while ( weaponData[weaponNum].zoomingTime < cg.time ) {
+					cg_gun_x.value += (weaponData[weaponNum].zoomedX / 20);
+					cg_gun_y.value += (weaponData[weaponNum].zoomedY / 20);
+					cg_gun_z.value += (weaponData[weaponNum].zoomedZ / 20);
+					weaponData[weaponNum].zoomingTime = cg.time + 1;
+					if ( cg_gun_x.value > weaponData[weaponNum].zoomedX ) {
+						cg_gun_x.value = weaponData[weaponNum].zoomedX;
+					}
+					if ( cg_gun_y.value > weaponData[weaponNum].zoomedY ) {
+						cg_gun_y.value = weaponData[weaponNum].zoomedY;
+					}
+					if ( cg_gun_z.value > weaponData[weaponNum].zoomedZ ) {
+						cg_gun_z.value = weaponData[weaponNum].zoomedZ;
+					}
+				}
+			}
+		
+			//If the weapon has an ironsight/scope fov paremeter then let's use that
+			if ( weaponData[weaponNum].ironsightFov ) {
+				cg_zoomFov = weaponData[weaponNum].ironsightFov;
+			}
+			
+			f = ( cg.time - cg.zoomTime ) / ZOOM_OUT_TIME;
+			if ( f > 1.0 ) {
+				fov_x = cg_zoomFov;
+			} else {
+				fov_x = fov_x - f * ( fov_x - cg_zoomFov );
+			}
 		} else {
 			f = ( cg.time - cg.zoomTime ) / ZOOM_OUT_TIME;
 			if ( f > 1.0 ) {
@@ -1435,9 +1466,11 @@ static qboolean	CG_CalcFov( void ) {
 			} else {
 				fov_x = cg_zoomFov + f * ( fov_x - cg_zoomFov );
 			}
+			resetGunOffset ( weaponNum );
 		}
 	}
 
+//	g_fov = fov_x;
 	return ( CG_CalcFOVFromX( fov_x ) );
 }
 

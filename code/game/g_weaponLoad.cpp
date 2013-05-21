@@ -152,6 +152,10 @@ void WPN_MissileHitSound(const char **holdBuf);
 void WPN_AltMissileHitSound(const char **holdBuf);
 void WPN_MuzzleEffect(const char **holdBuf);
 void WPN_AltMuzzleEffect(const char **holdBuf);
+void WPN_IronsightFov(const char **holdBuf);
+void WPN_ZoomedX(const char **holdBuf);
+void WPN_ZoomedY(const char **holdBuf);
+void WPN_ZoomedZ(const char **holdBuf);
 
 typedef struct 
 {
@@ -198,7 +202,11 @@ wpnParms_t WpnParms[] =
 	"missileHitSound",		WPN_MissileHitSound,
 	"altmissileHitSound",	WPN_AltMissileHitSound,
 	"muzzleEffect",			WPN_MuzzleEffect,
-	"altmuzzleEffect",		WPN_AltMuzzleEffect
+	"altmuzzleEffect",		WPN_AltMuzzleEffect,
+	"ironsightFov",			WPN_IronsightFov,
+	"zoomedXOffset",		WPN_ZoomedX,
+	"zoomedYOffset",		WPN_ZoomedY,
+	"zoomedZOffset",		WPN_ZoomedZ
 };
 
 const int WPN_PARM_MAX =  sizeof(WpnParms) / sizeof(WpnParms[0]);
@@ -1150,6 +1158,82 @@ void WPN_AltMuzzleEffect(const char **holdBuf)
 	Q_strncpyz(weaponData[wpnParms.weaponNum].mAltMuzzleEffect,tokenStr,len);
 
 #endif
+}
+
+//--------------------------------------------
+void WPN_IronsightFov(const char **holdBuf)
+{
+	float		tokenFloat;
+
+	if ( COM_ParseFloat(holdBuf,&tokenFloat)) 
+	{
+		SkipRestOfLine(holdBuf);
+		return;
+	}
+
+	if ((tokenFloat < 0) || (tokenFloat > 10000 )) // FIXME :What are the right values?
+	{
+		gi.Printf(S_COLOR_YELLOW"WARNING: bad Firetime in external weapon data '%d'\n", tokenFloat);
+		return;
+	}
+	weaponData[wpnParms.weaponNum].ironsightFov = tokenFloat;
+}
+
+//--------------------------------------------
+void WPN_ZoomedX(const char **holdBuf)
+{
+	float		tokenFloat;
+
+	if ( COM_ParseFloat(holdBuf,&tokenFloat)) 
+	{
+		SkipRestOfLine(holdBuf);
+		return;
+	}
+
+	if ((tokenFloat < 0) || (tokenFloat > 10000 )) // FIXME :What are the right values?
+	{
+		gi.Printf(S_COLOR_YELLOW"WARNING: bad Firetime in external weapon data '%d'\n", tokenFloat);
+		return;
+	}
+	weaponData[wpnParms.weaponNum].zoomedX = tokenFloat;
+}
+
+//--------------------------------------------
+void WPN_ZoomedY(const char **holdBuf)
+{
+	float		tokenFloat;
+
+	if ( COM_ParseFloat(holdBuf,&tokenFloat)) 
+	{
+		SkipRestOfLine(holdBuf);
+		return;
+	}
+
+	if ((tokenFloat < 0) || (tokenFloat > 10000 )) // FIXME :What are the right values?
+	{
+		gi.Printf(S_COLOR_YELLOW"WARNING: bad Firetime in external weapon data '%d'\n", tokenFloat);
+		return;
+	}
+	weaponData[wpnParms.weaponNum].zoomedY = tokenFloat;
+}
+
+//--------------------------------------------
+void WPN_ZoomedZ(const char **holdBuf)
+{
+	float		tokenFloat;
+
+	if ( COM_ParseFloat(holdBuf,&tokenFloat)) 
+	{
+		SkipRestOfLine(holdBuf);
+		return;
+	}
+
+	if ((tokenFloat < 0) || (tokenFloat > 10000 )) // FIXME :What are the right values?
+	{
+		gi.Printf(S_COLOR_YELLOW"WARNING: bad Firetime in external weapon data '%d'\n", tokenFloat);
+		return;
+	}
+	weaponData[wpnParms.weaponNum].zoomedZ = tokenFloat;
 }
 
 //--------------------------------------------

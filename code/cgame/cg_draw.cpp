@@ -1377,35 +1377,37 @@ static void CG_DrawCrosshair( vec3_t worldPoint )
 	//Corto
 	//Ironsights
 	//I modified this check so when zooming though the ironsights the crosshair remains on screen
-	if ( !cg_drawCrosshair.integer || cg.zoomMode == 1 || cg.zoomMode == 3 || cg.zoomMode == 0)
-	{
+	if ( !cg_drawCrosshair.integer || cg.zoomMode == 1 ) {
 		return;
 	}
 
-	if ( cg.zoomMode == 2) {
-		switch ( cg.snap->ps.weapon )
-		{
-		case WP_DISRUPTOR:
-			return;
-			break;
-		case WP_DET_PACK:
-			return;
-			break;
-		case WP_TRIP_MINE:
-			return;
-			break;
-		case WP_ROCKET_LAUNCHER:
-			return;
-			break;
-		case WP_REPEATER:
-			return;
-			break;
-		case WP_STUN_BATON:
-			return;
-			break;
-		default:
-			break;
-		}
+	switch ( cg.snap->ps.weapon ) {
+	case WP_THERMAL:
+		return;
+		break;
+	case WP_SABER:
+		return;
+		break;
+	case WP_DISRUPTOR:
+		return;
+		break;
+	case WP_DET_PACK:
+		return;
+		break;
+	case WP_TRIP_MINE:
+		return;
+		break;
+	case WP_ROCKET_LAUNCHER:
+		return;
+		break;
+	case WP_REPEATER:
+		return;
+		break;
+	case WP_STUN_BATON:
+		return;
+		break;
+	default:
+		break;
 	}
 
 	//set color based on what kind of ent is under crosshair

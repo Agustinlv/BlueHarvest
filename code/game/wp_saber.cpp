@@ -8541,25 +8541,22 @@ void WP_InitForcePowers( gentity_t *ent )
 	}
 }
 
+//Corto
 //Armor regeneration after taking damage
-void ArmorRegenerate( gentity_t *self, int mod)
+void ArmorRegenerate( gentity_t *self)
 {
-	//Let's not give shield regeneration to the NPCs, it defeats the purpose of this
-	if ( !self->client || self-> NPC || self->client->ps.stats[STAT_HEALTH] <= 0 )
-	{
+	//Let's not give shield regeneration to the NPCs, it defeats the purpose of this, if the player's dead or if he burned out the shields
+	//You'll need a shield pack to restart them
+	if ( !self->client || self-> NPC || self->client->ps.stats[STAT_HEALTH] <= 0 || self->client->ps.stats[STAT_ARMOR] <= 0) {
 		return;
 	}
-
 		
-	if ( self->client->ps.stats[STAT_ARMOR] < self->client->ps.stats[STAT_MAX_HEALTH] )
-	{
-		if ( self->client->ps.rechargeTime < level.time)
-		{
+	if ( self->client->ps.stats[STAT_ARMOR] < self->client->ps.stats[STAT_MAX_HEALTH] ) {
+		if ( self->client->ps.rechargeTime < cg.time) {
 			self->client->ps.stats[STAT_ARMOR] += 1;
 			//The more damaged your shields are the slower they are going to start regenerating
-			self->client->ps.rechargeTime = level.time + (200 - self->client->ps.stats[STAT_ARMOR]);
-			if ( self->client->ps.stats[STAT_ARMOR] > self->client->ps.stats[STAT_MAX_HEALTH] )
-			{
+			self->client->ps.rechargeTime = cg.time + (200 - self->client->ps.stats[STAT_ARMOR]);
+			if ( self->client->ps.stats[STAT_ARMOR] > self->client->ps.stats[STAT_MAX_HEALTH] ) {
 				self->client->ps.stats[STAT_ARMOR] = self->client->ps.stats[STAT_MAX_HEALTH];
 			}
 		}

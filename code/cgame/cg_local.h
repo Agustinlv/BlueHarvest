@@ -50,8 +50,8 @@ This file is part of Jedi Knight 2.
 // Zoom vars
 #define	ZOOM_TIME			150		// not currently used?
 #define MAX_ZOOM_FOV		3.0f
-#define ZOOM_IN_TIME		1500.0f	
-#define ZOOM_OUT_TIME		100.0f
+#define ZOOM_IN_TIME		200.0f	
+#define ZOOM_OUT_TIME		200.0f
 #define ZOOM_START_PERCENT	0.3f	
 
 #define	ITEM_BLOB_TIME		200

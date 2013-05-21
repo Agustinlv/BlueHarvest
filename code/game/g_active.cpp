@@ -44,7 +44,7 @@ extern void WP_SaberReflectCheck( gentity_t *self, usercmd_t *ucmd  );
 extern void WP_SaberUpdate( gentity_t *self, usercmd_t *ucmd );
 extern void WP_SaberStartMissileBlockCheck( gentity_t *self, usercmd_t *ucmd  );
 extern void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd );
-extern void ArmorRegenerate( gentity_t *self, int mod );
+extern void ArmorRegenerate( gentity_t *self );
 extern void WP_SaberInitBladeData( gentity_t *ent );
 extern gentity_t *SeekerAcquiresTarget ( gentity_t *ent, vec3_t pos );
 extern void FireSeeker( gentity_t *owner, gentity_t *target, vec3_t origin, vec3_t dir );
@@ -2167,17 +2167,7 @@ extern cvar_t	*g_skippingcin;
 			ucmd->upmove = 0;
 			PM_AdjustAnglesToGripper( ent, ucmd );
 		}
-		/*if ( ent->client->ps.leanofs )
-		{//no shooting while leaning
-			ucmd->buttons &= ~BUTTON_ATTACK;
-			if ( ent->client->ps.weapon != WP_DISRUPTOR )
-			{//can still zoom around corners
-				ucmd->buttons &= ~BUTTON_ALT_ATTACK;
-			}
-		}*/
-	}
-	else
-	{
+	} else {
 		if ( ent->s.eFlags & EF_LOCKED_TO_WEAPON )
 		{
 			G_UpdateEmplacedWeaponData( ent );
@@ -2683,7 +2673,7 @@ extern cvar_t	*g_skippingcin;
 		ent->client->ps.saberBlockingTime = level.time + FRAMETIME;
 	}
 	WP_ForcePowersUpdate( ent, ucmd );
-	ArmorRegenerate( ent, 0 );
+	ArmorRegenerate( ent );
 
 	//if we have the saber in hand, check for starting a block to reflect shots
 	WP_SaberStartMissileBlockCheck( ent, ucmd  );

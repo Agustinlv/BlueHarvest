@@ -23,13 +23,12 @@ This file is part of Jedi Knight 2.
 #include "cg_media.h"
 #include "FxScheduler.h"
 #include "..\game\wp_saber.h"
-
+#include "..\game\g_local.h"
 #include "..\game\anims.h"
 
 
 extern void CG_LightningBolt( centity_t *cent, vec3_t origin );
-void resetGunOffsets (void);
-void setCustomGunOffset (int weaponNumber);
+void resetGunOffset ( int weaponNum );
 
 #define	PHASER_HOLDFRAME	2
 int cgi_UI_GetMenuInfo(char *menuFile,int *x,int *y);
@@ -2124,7 +2123,7 @@ void CG_NextWeapon_f( void ) {
 	for ( i = 0 ; i <= MAX_PLAYER_WEAPONS ; i++ ) 
 	{
 		cg.weaponSelect++;
-		setCustomGunOffset( cg.weaponSelect );
+		resetGunOffset ( cg.weaponSelect );
 		if ( cg.weaponSelect < FIRST_WEAPON || cg.weaponSelect > MAX_PLAYER_WEAPONS) { 
 			cg.weaponSelect = FIRST_WEAPON; 
 		}
@@ -2269,7 +2268,7 @@ void CG_PrevWeapon_f( void ) {
 
 	for ( i = 0 ; i <= MAX_PLAYER_WEAPONS ; i++ ) {
 		cg.weaponSelect--;
-		setCustomGunOffset( cg.weaponSelect );
+		resetGunOffset ( cg.weaponSelect );
 		if ( cg.weaponSelect < FIRST_WEAPON || cg.weaponSelect > MAX_PLAYER_WEAPONS) { 
 			cg.weaponSelect = MAX_PLAYER_WEAPONS;
 		}
@@ -2425,11 +2424,11 @@ void CG_Weapon_f( void )
 			}
 		}
 	}
-	else if ( num >= WP_THERMAL && num <= WP_DET_PACK ) // these weapons cycle
+	else if ( num >= WP_TRIP_MINE && num <= WP_DET_PACK ) // these weapons cycle
 	{
 		int weap, i = 0;
 
-		if ( cg.snap->ps.weapon >= WP_THERMAL && cg.snap->ps.weapon <= WP_DET_PACK )
+		if ( cg.snap->ps.weapon >= WP_TRIP_MINE && cg.snap->ps.weapon <= WP_DET_PACK )
 		{
 			// already in cycle range so start with next cycle item
 			weap = cg.snap->ps.weapon + 1;
@@ -2437,7 +2436,7 @@ void CG_Weapon_f( void )
 		else
 		{
 			// not in cycle range, so start with thermal detonator
-			weap = WP_THERMAL;
+			weap = WP_TRIP_MINE;
 		}
 
 		// prevent an endless loop
@@ -2445,7 +2444,7 @@ void CG_Weapon_f( void )
 		{
 			if ( weap > WP_DET_PACK )
 			{
-				weap = WP_THERMAL;
+				weap = WP_TRIP_MINE;
 			}
 
 			if ( cg.snap->ps.ammo[weaponData[weap].ammoIndex] > 0 || weap == WP_DET_PACK )
@@ -2469,7 +2468,7 @@ void CG_Weapon_f( void )
 	SetWeaponSelectTime();
 //	cg.weaponSelectTime = cg.time;
 	cg.weaponSelect = num;
-	setCustomGunOffset( cg.weaponSelect );
+	resetGunOffset ( cg.weaponSelect );
 }
 
 /*
@@ -2501,7 +2500,7 @@ void CG_OutOfAmmoChange( void ) {
 		{
 			SetWeaponSelectTime();
 			cg.weaponSelect = i;
-			setCustomGunOffset ( cg.weaponSelect );
+			resetGunOffset ( cg.weaponSelect );
 			break;
 		}
 	}
@@ -2509,7 +2508,7 @@ void CG_OutOfAmmoChange( void ) {
 	if ( cg_autoswitch.integer != 1 )
 	{
 		// didn't have that, so try these. Start with thermal...
-		for ( i = WP_THERMAL; i <= WP_DET_PACK; i++ ) 
+		for ( i = WP_TRIP_MINE; i <= WP_DET_PACK; i++ ) 
 		{	
 			// We don't want the emplaced, or melee here
 			if ( original != i && CG_WeaponSelectable( i, original, qfalse ) )
@@ -2522,7 +2521,7 @@ void CG_OutOfAmmoChange( void ) {
 				{
 					SetWeaponSelectTime();
 					cg.weaponSelect = i;
-					setCustomGunOffset ( cg.weaponSelect );
+					resetGunOffset ( cg.weaponSelect );
 					break;
 				}
 			}
@@ -2534,7 +2533,7 @@ void CG_OutOfAmmoChange( void ) {
 	{
 		SetWeaponSelectTime();
 		cg.weaponSelect = WP_STUN_BATON;
-		setCustomGunOffset ( cg.weaponSelect );
+		resetGunOffset ( cg.weaponSelect );
 	}
 }
 
@@ -2889,70 +2888,28 @@ void CG_MissileHitPlayer( centity_t *cent, int weapon, vec3_t origin, vec3_t dir
 	}
 }
 
-void setCustomGunOffset (int weaponNumber)
-{
-	switch (weaponNumber)
-	{
-	case WP_ROCKET_LAUNCHER:
-		cg_gun_x.value = -2;
-		cg_gun_y.value = -2;
-		cg_gun_z.value = -1;
-		break;
-	default:
-		cg_gun_x.value = 0;
-		cg_gun_y.value = 0;
-		cg_gun_z.value = 0;
-		break;
-	}
-}
-
 extern float cg_zoomFov;
 
 //Corto
-//Set custom field of views and offsets for every weapon
-void setZoomGunOffset (int weaponNumber)
+//Reseting the offets to zero with some smooth transitioning
+void resetGunOffset ( int weaponNum )
 {
-	float actualFOV = (cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
-	switch (weaponNumber) {
-	case WP_BRYAR_PISTOL:
-		cg_zoomFov = actualFOV - 10.0;
-		cg_gun_z.value = 3;
-		cg_gun_y.value = 3;
-		cg_gun_x.value = 1;
-		break;
-	case WP_BLASTER:
-		cg_zoomFov = actualFOV - 20.0f;
-		cg_gun_z.value = 3;
-		cg_gun_y.value = 2;
-		break;
-	case WP_DISRUPTOR:
-		cg_zoomFov = actualFOV - 65.0f;
-		break;
-	case WP_BOWCASTER:
-		cg_zoomFov = actualFOV - 20.0f;
-		cg_gun_z.value = 3;
-		cg_gun_y.value = 2;
-		break;
-	case WP_REPEATER:
-		cg_zoomFov = actualFOV - 20.0f;
-		cg_gun_z.value = 2.5;
-		cg_gun_y.value = 4;
-		break;
-	case WP_DEMP2:
-		cg_zoomFov = actualFOV - 15.0f;
-		cg_gun_z.value = 2;
-		cg_gun_y.value = 1;
-		break;
-	case WP_FLECHETTE:
-		cg_zoomFov = actualFOV - 10.0f;
-		cg_gun_z.value = 2.5;
-		cg_gun_y.value = 2;
-		break;
-	case WP_ROCKET_LAUNCHER:
-		cg_zoomFov = actualFOV - 45.0f;
-		break;
-	default:
-		cg_zoomFov = actualFOV;
-		break;
+	//Now is when the actual transition happens. Hopefully this will smooth out the aim up and down animation
+	if ( cg_gun_x.value > 0 || cg_gun_y.value > 0 || cg_gun_z.value > 0 ) {
+		while ( weaponData[weaponNum].zoomingTime < cg.time ) {
+			cg_gun_x.value -= (weaponData[weaponNum].zoomedX / 20);
+			cg_gun_y.value -= (weaponData[weaponNum].zoomedY / 20);
+			cg_gun_z.value -= (weaponData[weaponNum].zoomedZ / 20);
+			weaponData[weaponNum].zoomingTime = cg.time + 1;
+			if ( cg_gun_x.value < 0 ) {
+				cg_gun_x.value = 0;
+			}
+			if ( cg_gun_y.value < 0 ) {
+				cg_gun_y.value = 0;
+			}
+			if ( cg_gun_z.value < 0 ) {
+				cg_gun_z.value = 0;
+			}
+		}
 	}
 }

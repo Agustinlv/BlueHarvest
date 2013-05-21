@@ -402,9 +402,7 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 	vec3_t		start, end, tmins, tmaxs, right;
 	trace_t		trace;
 	qboolean	lockedYaw = qfalse;
-	int			transitionTime = 1;
-	int			leanofsIncrements = 2;
-
+	
 	if ( ps->pm_type == PM_INTERMISSION ) 
 	{
 		return;		// no view changes at all
@@ -499,7 +497,7 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 
 	//Corto
 	//Added new keys for lean left and right
-	if ( (!cg.renderingThirdPerson||cg.zoomMode) && ( cmd->buttons & BUTTON_LEANRIGHT || cmd->buttons & BUTTON_LEANLEFT)) {
+	if ( /*(!cg.renderingThirdPerson||cg.zoomMode) &&*/ ( cmd->buttons & BUTTON_LEANRIGHT || cmd->buttons & BUTTON_LEANLEFT)) {
 		if ( gent ) {
 			int leanofs = ps->leanofs;
 			vec3_t	viewangles;
@@ -508,9 +506,9 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 
 			if ( cmd->buttons & BUTTON_LEANRIGHT ) {
 				if (ps->leanofs < 32) {
-					while (ps->leanStopDebounceTime < level.time ) {
-						leanofs = ps->leanofs + leanofsIncrements;
-						ps->leanStopDebounceTime = level.time + transitionTime;
+					while (ps->leanStopDebounceTime < cg.time ) {
+						leanofs = ps->leanofs + 1;
+						ps->leanStopDebounceTime = cg.time + 1;
 						}
 				} else {
 					leanofs = 32;
@@ -519,9 +517,9 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 		
 			if ( cmd->buttons & BUTTON_LEANLEFT ) {
 				if (ps->leanofs > -32) {
-					while (ps->leanStopDebounceTime < level.time ) {
-						leanofs = ps->leanofs - leanofsIncrements;
-						ps->leanStopDebounceTime = level.time + transitionTime;
+					while (ps->leanStopDebounceTime < cg.time ) {
+						leanofs = ps->leanofs - 1;
+						ps->leanStopDebounceTime = cg.time + 1;
 						}
 				} else {
 					leanofs = -32;
@@ -555,16 +553,16 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, gentity_t *gent )
 		}
 
 		if ( ps->leanofs > 0 ) {
-			while (ps->leanStopDebounceTime < level.time ) {
-				ps->leanofs -= leanofsIncrements;
-				ps->leanStopDebounceTime = level.time + transitionTime;
+			while (ps->leanStopDebounceTime < cg.time ) {
+				ps->leanofs -= 1;
+				ps->leanStopDebounceTime = cg.time + 1;
 			}
 		} 
 		
 		if ( ps->leanofs < 0 ) {
-			while (ps->leanStopDebounceTime < level.time ) {
-				ps->leanofs += leanofsIncrements;
-				ps->leanStopDebounceTime = level.time + transitionTime;
+			while (ps->leanStopDebounceTime < cg.time ) {
+				ps->leanofs += 1;
+				ps->leanStopDebounceTime = cg.time + 1;
 			}
 		}
 	}

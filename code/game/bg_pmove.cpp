@@ -71,8 +71,8 @@ extern qboolean PM_InDeathAnim ( void );
 extern qboolean PM_StandingAnim( int anim );
 extern int PM_SaberFlipOverAttackMove( void );
 extern int PM_SaberJumpAttackMove( void );
-extern void setCustomGunOffset (int weaponNumber);
-extern void setZoomGunOffset (int weaponNumber);
+extern void resetGunOffset ( int weaponNum );
+extern void setZoomGunOffset ( int weaponNum );
 
 qboolean PM_InKnockDown( playerState_t *ps );
 qboolean PM_InKnockDownOnGround( playerState_t *ps );
@@ -7903,8 +7903,13 @@ static void PM_Weapon( void )
 	}
 
 	// check for weapon change
-	// can't change if weapon is firing, but can change again if lowering or raising
-	if ( pm->ps->weaponTime <= 0 || pm->ps->weaponstate != WEAPON_FIRING ) {
+	if (pm->ps->weapon == WP_SABER) { //If the weapon is the lightsaber we don't want the player to change while in the middle of an attack or the saber will be left on the floor
+		if ( pm->ps->weaponTime <= 0 || pm->ps->weaponstate != WEAPON_FIRING ) {
+			if ( pm->ps->weapon != pm->cmd.weapon ) {
+				PM_BeginWeaponChange( pm->cmd.weapon );
+			}
+		}
+	} else { //The player can change the weapon whenever he sees fit
 		if ( pm->ps->weapon != pm->cmd.weapon ) {
 			PM_BeginWeaponChange( pm->cmd.weapon );
 		}
@@ -8115,6 +8120,7 @@ static void PM_Weapon( void )
 	//GENIUS!
 	if ( pm->cmd.buttons & BUTTON_THROW_GRENADE ) {
 			pm->ps->weapon = WP_THERMAL;
+			amount = weaponData[WP_THERMAL].energyPerShot;
 	}
 		
 	pm->ps->weaponstate = WEAPON_FIRING;
@@ -8126,7 +8132,7 @@ static void PM_Weapon( void )
 	}
 
 	// take an ammo away if not infinite
-	if ( pm->ps->ammo[ weaponData[pm->ps->weapon].ammoIndex ] != -1 )
+	if ( pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex ] != -1 )
 	{
 		// Check ammo if the weapon can be activated
 		if ((pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex] - amount) >= 0) {
@@ -8419,27 +8425,43 @@ void PM_AdjustAttackStates( pmove_t *pm )
 	if ( pm->ps->weapon != WP_DET_PACK && pm->ps->weapon != WP_TRIP_MINE && pm->ps->weapon != WP_STUN_BATON && pm->gent && pm->gent->s.number == 0 && pm->ps->weaponstate != WEAPON_DROPPING ) { //I don't want to get in here if I'm selecting the det packs, mines or stun baton
 		if ( (pm->cmd.buttons & BUTTON_ALT_ATTACK && pm->ps->weapon != WP_DISRUPTOR) || (pm->cmd.buttons & BUTTON_ALT_ATTACK && pm->ps->weapon == WP_DISRUPTOR && pm->ps->groundEntityNum != ENTITYNUM_NONE && pm->cmd.upmove <= 0) ) {
 			// We just pressed the alt-fire key
-			if ( cg.zoomMode == 0 ) {
-				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomstart.wav" );
-				if ( cg.renderingThirdPerson ) {
-					cg_thirdPersonRange.value = 20;
+			if ( cg.renderingThirdPerson && (pm->ps->weapon != WP_DISRUPTOR && pm->ps->weapon != WP_ROCKET_LAUNCHER) ) {
+				if ( cg_thirdPersonRange.value > 20 ) {
+					while (cg.zoomTime < cg.time ) {
+						cg_thirdPersonRange.value -= 1;
+						cg.zoomTime = cg.time + 1;
+						if ( cg_thirdPersonRange.value < 20 ) {
+							cg_thirdPersonRange.value = 20;
+						}
+					}
 				}
-				cg.zoomMode = 2;
-				cg.zoomTime = cg.time;
-				cg.zoomLocked = qtrue;
-				setZoomGunOffset (pm->ps->weapon);
+				//cg_zoomFov = (cg.overrides.active&CG_OVERRIDE_FOV) ? cg.overrides.fov : cg_fov.value;
+			} else {
+				if ( cg.zoomMode == 0 ) {
+					G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomstart.wav" );
+					cg.zoomMode = 2;
+					cg.zoomTime = cg.time;
+					cg.zoomLocked = qtrue;
+				}
 			}
 		} else if ( !(pm->cmd.buttons & BUTTON_ALT_ATTACK )) { //Releasing the alt fire button releases the zoom.
 			// Not pressing zoom any more
 			if ( cg.renderingThirdPerson ) {
-				cg_thirdPersonRange.value = 40;
+				if ( cg_thirdPersonRange.value < 40 ) {
+					while (cg.zoomTime < cg.time ) {
+						cg_thirdPersonRange.value += 1;
+						cg.zoomTime = cg.time + 1;
+						if ( cg_thirdPersonRange.value > 40 ) {
+							cg_thirdPersonRange.value = 40;
+						}
+					}
+				}
 			}
 			if ( cg.zoomMode == 2 ) {
 				G_SoundOnEnt( pm->gent, CHAN_AUTO, "sound/weapons/disruptor/zoomend.wav" );
 				cg.zoomMode = 0;
 				cg.zoomTime = cg.time;
-				cg.zoomLocked = qtrue;
-				setCustomGunOffset ( pm->ps->weapon );
+				cg.zoomLocked = qfalse;
 			}
 		}
 	}

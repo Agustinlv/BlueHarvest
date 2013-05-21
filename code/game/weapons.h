@@ -126,6 +126,7 @@ typedef struct weaponData_s
 
 	char	missileHitSound[64];	// Missile impact sound
 	char	altmissileHitSound[64];	// alt Missile impact sound
+
 #ifndef _USRDLL
 	void	*func;
 	void	*altfunc;
@@ -136,6 +137,13 @@ typedef struct weaponData_s
 	int		mAltMuzzleEffectID;
 
 #endif
+
+	float	ironsightFov;			// Field of view for the ironsights
+	float	zoomedX;				//X offset for zoomed position
+	float	zoomedY;				//Y offset for zoomed position
+	float	zoomedZ;				//Z offset for zoomed position
+
+	int		zoomingTime;			// Time for smooth transitions
 
 } weaponData_t;
 
